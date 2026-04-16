@@ -22,10 +22,10 @@ Python package for automating WhatsApp Web via Playwright + Chrome DevTools Prot
 2. First-time login — start Chrome manually, scan QR code once:
    ```bash
    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-     --user-data-dir=~/chrome_profile \
+     --user-data-dir=/tmp/whatsapp-web/chrome_profile \
      --remote-debugging-port=9222
    ```
-   Then open https://web.whatsapp.com and scan QR from phone. Session persists in `chrome_profile/`.
+   Then open https://web.whatsapp.com and scan QR from phone. Session persists in `/tmp/whatsapp-web/chrome_profile/`.
 
 ## Usage
 
@@ -78,7 +78,7 @@ except LoginRequiredError:
 
 ```python
 WhatsAppWeb(
-    chrome_profile_dir="/path/to/profile",  # Default: ~/projects/lt/leads/chrome_profile
+    chrome_profile_dir="/path/to/profile",  # Default: /tmp/whatsapp-web/chrome_profile
     cdp_port=9222,                          # CDP port
     chrome_path="/usr/bin/chrome",           # Auto-detected on macOS/Linux
     between_delay=3.0,                      # Anti-ban delay (seconds)

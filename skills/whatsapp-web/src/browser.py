@@ -28,9 +28,8 @@ class ChromeBrowser:
         chrome_path: str | None = None,
     ):
         if user_data_dir is None:
-            # Default: ~/projects/lt/leads/chrome_profile (shared WA session)
-            user_data_dir = os.path.expanduser(
-                "~/projects/lt/leads/chrome_profile"
+            user_data_dir = os.path.join(
+                "/tmp", "whatsapp-web", "chrome_profile"
             )
         self.user_data_dir = os.path.abspath(user_data_dir)
         self.cdp_port = cdp_port

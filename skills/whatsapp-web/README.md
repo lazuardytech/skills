@@ -22,7 +22,7 @@ A reusable Python package for automating WhatsApp Web via Playwright + Chrome De
 1. Run Chrome with the profile:
    ```bash
    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-     --user-data-dir=~/projects/lt/leads/chrome_profile \
+     --user-data-dir=/tmp/whatsapp-web/chrome_profile \
      --remote-debugging-port=9222
    ```
 2. Navigate to https://web.whatsapp.com in Chrome
