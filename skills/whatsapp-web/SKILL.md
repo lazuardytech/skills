@@ -10,89 +10,62 @@ metadata:
 
 # whatsapp-web
 
-Python package for automating WhatsApp Web via Playwright + Chrome DevTools Protocol (CDP).
+WhatsApp Web automation via Playwright + Chrome CDP. Scripts output JSON to stdout.
 
 ## Setup
 
-1. Install dependencies:
-   ```bash
-   pip install playwright>=1.58.0
-   ```
+Requires Python 3.10+, Google Chrome, and Playwright.
 
-2. First-time login — start Chrome manually, scan QR code once:
-   ```bash
-   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-     --user-data-dir=/tmp/whatsapp-web/chrome_profile \
-     --remote-debugging-port=9222
-   ```
-   Then open https://web.whatsapp.com and scan QR from phone. Session persists in `/tmp/whatsapp-web/chrome_profile/`.
+First-time login — scan QR code once:
 
-## Usage
-
-```python
-import asyncio
-from src import WhatsAppWeb
-
-async def main():
-    async with WhatsAppWeb() as wa:
-        # Check if number is on WhatsApp
-        result = await wa.check_number("081234567890")
-
-        # Send a message
-        await wa.send_message("Ezra", "Hello!")
-
-        # Batch check numbers
-        results = await wa.check_numbers(["08111", "08222", "08333"])
-
-asyncio.run(main())
+```bash
+python3 scripts/login.py --wait
 ```
 
-### Handle QR code login
+Chrome profile persists in `/tmp/whatsapp-web/chrome_profile/`. No re-scan needed after first login.
 
-```python
-from src import WhatsAppWeb, LoginRequiredError
+## Available Scripts
 
-wa = WhatsAppWeb()
-try:
-    await wa.start()
-except LoginRequiredError:
-    print("Scan QR code on your phone...")
-    await wa.wait_for_login(timeout=120)
+### Check if number(s) are on WhatsApp
+
+```bash
+# Single number
+python3 scripts/check_number.py --phone 081234567890
+
+# Multiple numbers (comma-separated)
+python3 scripts/check_number.py --phones 08111,08222,08333
 ```
 
-## API
+Output: `{"081234567890": true}`
 
-| Method | Description |
-|--------|-------------|
-| `start()` | Launch Chrome, connect, navigate to WA Web |
-| `stop()` | Disconnect (Chrome keeps running) |
-| `check_number(phone)` | Check if number is on WhatsApp → `bool` |
-| `check_numbers(phones)` | Batch check → `dict[str, bool]` |
-| `send_message(to, message)` | Send message to contact |
-| `open_chat(name_or_number)` | Open chat window |
-| `read_last_messages(count)` | Read last N messages from open chat |
-| `is_logged_in()` | Check login state → `bool` |
-| `wait_for_login(timeout)` | Wait for QR scan → `bool` |
+### Send a message
 
-## Configuration
-
-```python
-WhatsAppWeb(
-    chrome_profile_dir="/path/to/profile",  # Default: /tmp/whatsapp-web/chrome_profile
-    cdp_port=9222,                          # CDP port
-    chrome_path="/usr/bin/chrome",           # Auto-detected on macOS/Linux
-    between_delay=3.0,                      # Anti-ban delay (seconds)
-)
+```bash
+python3 scripts/send_message.py --to "Ezra" --message "Hello!"
+python3 scripts/send_message.py --to 081234567890 --message "Hi there"
 ```
 
-## Exceptions
+Output: `{"status": "sent", "to": "Ezra"}`
 
-| Exception | When |
-|-----------|------|
-| `LoginRequiredError` | QR code scan needed |
-| `ChatNotFoundError` | Contact/number not found |
-| `BrowserNotRunningError` | Chrome not reachable |
-| `BrowserLaunchError` | Failed to start Chrome |
+### Check login state
+
+```bash
+# Check current state
+python3 scripts/login.py
+
+# Wait for QR scan (default 120s timeout)
+python3 scripts/login.py --wait
+python3 scripts/login.py --wait --timeout 60
+```
+
+Output: `{"state": "logged_in"}` or `{"state": "qr_code", "action": "Scan QR code from your phone"}`
+
+## Script conventions
+
+- All scripts output JSON to stdout, diagnostics to stderr
+- Exit code 0 = success, 1 = login required, 2 = contact not found
+- Run `python3 scripts/<name>.py --help` for usage
+- Scripts use PEP 723 inline dependencies — run with `uv run` or install Playwright manually
 
 ## Important notes
 
