@@ -63,12 +63,21 @@ class ChromeBrowser:
         # Detach Chrome from the parent process so it survives script exit.
         # This ensures subsequent script invocations reuse the same Chrome
         # window instead of spawning a new one.
+        # Force a separate Chrome instance from the user's default profile:
+        # - dedicated --user-data-dir + --profile-directory
+        # - --no-first-run / --no-default-browser-check suppress first-run UI
+        # - --new-window opens a fresh window even if another Chrome is running
         subprocess.Popen(
             [
                 self.chrome_path,
                 f"--user-data-dir={self.user_data_dir}",
+                "--profile-directory=Default",
                 f"--remote-debugging-port={self.cdp_port}",
                 "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--new-window",
+                "https://web.whatsapp.com",
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -90,6 +99,9 @@ class ChromeBrowser:
     async def connect(self, playwright):
         """Connect to Chrome via CDP. Returns (browser, context, page).
 
+        Prefers an existing web.whatsapp.com tab. Falls back to the first
+        non-blank tab, then creates a new tab if none exists.
+
         Args:
             playwright: An async Playwright instance (from async_playwright().__aenter__()).
         """
@@ -102,8 +114,28 @@ class ChromeBrowser:
         browser = await playwright.chromium.connect_over_cdp(
             f"http://localhost:{self.cdp_port}"
         )
+        if not browser.contexts:
+            raise BrowserNotRunningError(
+                "Chrome is running but exposes no browser contexts via CDP."
+            )
         context = browser.contexts[0]
-        page = context.pages[0]
+
+        page = None
+        for p in context.pages:
+            if "web.whatsapp.com" in p.url:
+                page = p
+                break
+        if page is None:
+            for p in context.pages:
+                if p.url and p.url != "about:blank":
+                    page = p
+                    break
+        if page is None and context.pages:
+            page = context.pages[0]
+        if page is None:
+            logger.info("No existing tab found, creating a new one")
+            page = await context.new_page()
+
         self._browser = browser
         return browser, context, page
 

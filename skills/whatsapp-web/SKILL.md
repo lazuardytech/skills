@@ -1,6 +1,6 @@
 ---
 name: whatsapp-web
-description: WhatsApp Web automation via Playwright and Chrome CDP. Use when the user needs to verify phone numbers on WhatsApp, send WhatsApp messages, read chat history, check if a number is registered on WhatsApp, automate WhatsApp Web login, or perform bulk number verification. Triggers include requests to "check this number on WhatsApp", "send a WhatsApp message", "verify WhatsApp numbers", "read WhatsApp messages", "open WhatsApp chat", "batch check numbers", or any task requiring programmatic WhatsApp Web interaction.
+description: WhatsApp Web automation via Playwright and Chrome CDP. Use when the user needs to open WhatsApp Web, launch the WhatsApp Web browser, verify phone numbers on WhatsApp, send WhatsApp messages, read chat history, check if a number is registered on WhatsApp, automate WhatsApp Web login, or perform bulk number verification. Triggers include requests to "open WhatsApp Web", "buka WhatsApp Web", "launch WhatsApp", "check this number on WhatsApp", "send a WhatsApp message", "verify WhatsApp numbers", "read WhatsApp messages", "open WhatsApp chat", "batch check numbers", or any task requiring programmatic WhatsApp Web interaction. For any "open/launch/buka WhatsApp Web" request, run `scripts/login.py` — it starts Chrome, navigates to web.whatsapp.com, and waits for QR scan if needed.
 license: Proprietary
 compatibility: Requires Python 3.10+, Google Chrome, and Playwright. macOS or Linux only.
 metadata:

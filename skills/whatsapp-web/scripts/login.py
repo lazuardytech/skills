@@ -35,7 +35,8 @@ async def run(timeout: int, check_only: bool) -> dict:
     print("Starting Chrome...", file=sys.stderr)
     wa._chrome.ensure_running()
 
-    wa._playwright = await async_playwright().__aenter__()
+    wa._pw_cm = async_playwright()
+    wa._playwright = await wa._pw_cm.__aenter__()
     wa._browser, wa._context, wa._page = await wa._chrome.connect(wa._playwright)
     wa._session = WhatsAppSession(wa._page)
 

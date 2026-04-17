@@ -67,6 +67,7 @@ class WhatsAppWeb:
             chrome_path=chrome_path,
         )
         self._between_delay = between_delay
+        self._pw_cm = None
         self._playwright = None
         self._browser = None
         self._context = None
@@ -79,7 +80,8 @@ class WhatsAppWeb:
         Raises LoginRequiredError if QR code scan is needed.
         """
         self._chrome.ensure_running()
-        self._playwright = await async_playwright().__aenter__()
+        self._pw_cm = async_playwright()
+        self._playwright = await self._pw_cm.__aenter__()
         self._browser, self._context, self._page = await self._chrome.connect(
             self._playwright
         )
@@ -88,8 +90,9 @@ class WhatsAppWeb:
 
     async def stop(self) -> None:
         """Disconnect from Chrome (Chrome keeps running)."""
-        if self._playwright:
-            await self._playwright.__aexit__(None, None, None)
+        if self._pw_cm is not None:
+            await self._pw_cm.__aexit__(None, None, None)
+            self._pw_cm = None
             self._playwright = None
         self._browser = None
         self._context = None
