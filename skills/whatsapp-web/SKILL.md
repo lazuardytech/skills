@@ -19,10 +19,10 @@ Requires Python 3.10+, Google Chrome, and Playwright.
 First-time login — scan QR code once:
 
 ```bash
-python3 scripts/login.py --wait
+python3 scripts/login.py
 ```
 
-Chrome profile persists in `/tmp/whatsapp-web/chrome_profile/`. No re-scan needed after first login.
+This opens Chrome, navigates to web.whatsapp.com, and polls every 5s until user is logged in. Script exits with code 0 when login detected. Chrome profile persists in `/tmp/whatsapp-web/chrome_profile/`. No re-scan needed after first login.
 
 ## Available Scripts
 
@@ -47,18 +47,22 @@ python3 scripts/send_message.py --to 081234567890 --message "Hi there"
 
 Output: `{"status": "sent", "to": "Ezra"}`
 
-### Check login state
+### Login / wait for QR scan
 
 ```bash
-# Check current state
+# Launch Chrome and wait until logged in (polls every 5s, default timeout 300s)
 python3 scripts/login.py
 
-# Wait for QR scan (default 120s timeout)
-python3 scripts/login.py --wait
-python3 scripts/login.py --wait --timeout 60
+# Custom timeout
+python3 scripts/login.py --timeout 120
+
+# Check state only, don't wait
+python3 scripts/login.py --check
 ```
 
-Output: `{"state": "logged_in"}` or `{"state": "qr_code", "action": "Scan QR code from your phone"}`
+Exits code 0 when logged in, 1 on timeout. Progress printed to stderr.
+
+Output: `{"state": "logged_in"}` or `{"state": "timeout", "error": "..."}`
 
 ## Script conventions
 
