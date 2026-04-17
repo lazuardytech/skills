@@ -60,21 +60,31 @@ class ChromeBrowser:
             )
 
         logger.info("Starting Chrome with CDP on port %d ...", self.cdp_port)
-        subprocess.Popen([
-            self.chrome_path,
-            f"--user-data-dir={self.user_data_dir}",
-            f"--remote-debugging-port={self.cdp_port}",
-            "--disable-blink-features=AutomationControlled",
-        ])
+        # Detach Chrome from the parent process so it survives script exit.
+        # This ensures subsequent script invocations reuse the same Chrome
+        # window instead of spawning a new one.
+        subprocess.Popen(
+            [
+                self.chrome_path,
+                f"--user-data-dir={self.user_data_dir}",
+                f"--remote-debugging-port={self.cdp_port}",
+                "--disable-blink-features=AutomationControlled",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+        )
 
-        for _ in range(10):
+        for _ in range(15):
             if self.is_running():
                 logger.info("Chrome ready")
                 return True
             time.sleep(1)
 
         raise BrowserLaunchError(
-            f"Chrome did not start within 10 seconds on port {self.cdp_port}"
+            f"Chrome did not start within 15 seconds on port {self.cdp_port}"
         )
 
     async def connect(self, playwright):
@@ -98,7 +108,10 @@ class ChromeBrowser:
         return browser, context, page
 
     async def disconnect(self):
-        """Disconnect Playwright from Chrome (Chrome keeps running)."""
-        if self._browser:
-            await self._browser.close()
-            self._browser = None
+        """Drop Playwright reference to Chrome (Chrome keeps running).
+
+        Note: we do NOT call browser.close() — that would close Chrome itself.
+        For CDP-attached browsers, just dropping the reference and closing
+        the Playwright context is enough.
+        """
+        self._browser = None
