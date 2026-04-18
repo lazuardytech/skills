@@ -15,11 +15,14 @@ from playwright.async_api import async_playwright
 
 from .browser import ChromeBrowser
 from .chat import chat_list_total_count as _chat_list_total_count
+from .chat import last_incoming_message as _last_incoming_message
+from .chat import last_message as _last_message
 from .chat import list_chats as _list_chats
 from .chat import list_pinned_chats as _list_pinned_chats
 from .chat import list_unread_chats as _list_unread_chats
 from .chat import open_chat as _open_chat
 from .chat import read_last_messages as _read_last_messages
+from .chat import read_last_messages_text as _read_last_messages_text
 from .chat import send_message as _send_message
 from .chat import unread_summary as _unread_summary
 from .contacts import check_number as _check_number
@@ -151,9 +154,24 @@ class WhatsAppWeb:
         await asyncio.sleep(self._between_delay)
         return result
 
-    async def read_last_messages(self, count: int = 10) -> list[str]:
-        """Read the last visible messages from the currently open chat."""
+    async def read_last_messages(self, count: int = 10) -> list[dict]:
+        """Read the last visible messages from the currently open chat.
+
+        Returns a list of dicts: {direction, sender, time, date, text}.
+        """
         return await _read_last_messages(self._page, count)
+
+    async def read_last_messages_text(self, count: int = 10) -> list[str]:
+        """Backward-compatible: return just message texts."""
+        return await _read_last_messages_text(self._page, count)
+
+    async def last_message(self, name_or_number: str) -> dict | None:
+        """Open a chat and return the very last message (any direction)."""
+        return await _last_message(self._page, name_or_number)
+
+    async def last_incoming_message(self, name_or_number: str) -> dict | None:
+        """Open a chat and return the last *received* message from the contact."""
+        return await _last_incoming_message(self._page, name_or_number)
 
     # --- Chat list ---
 

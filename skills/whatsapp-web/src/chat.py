@@ -292,13 +292,71 @@ async def send_message(page, name_or_number: str, message: str, wait: float = 5.
     return True
 
 
-async def read_last_messages(page, count: int = 10) -> list[str]:
+_READ_MESSAGES_JS = r"""
+(count) => {
+    // WA Web messages carry data-pre-plain-text="[time, date] Sender: " on
+    // a span wrapping the message bubble content. We walk up to the row
+    // to detect direction via .message-in / .message-out classes.
+    const metaRe = /^\[([^\],]+),\s*([^\]]+)\]\s*(.+?):\s*$/;
+    const nodes = Array.from(document.querySelectorAll('[data-pre-plain-text]'));
+    const result = [];
+    for (const el of nodes) {
+        const meta = el.getAttribute('data-pre-plain-text') || '';
+        const m = meta.match(metaRe);
+        if (!m) continue;  // skip list-item / quote fragments
+        let dir = 'unknown';
+        let anc = el;
+        for (let i = 0; i < 12 && anc; i++) {
+            if (anc.classList?.contains('message-in')) { dir = 'in'; break; }
+            if (anc.classList?.contains('message-out')) { dir = 'out'; break; }
+            anc = anc.parentElement;
+        }
+        const text = (el.innerText || '').trim();
+        result.push({
+            direction: dir,
+            sender: m[3].trim(),
+            time: m[1].trim(),
+            date: m[2].trim(),
+            text,
+        });
+    }
+    return result.slice(-count);
+}
+"""
+
+
+async def read_last_messages(page, count: int = 10) -> list[dict]:
     """Read the last visible messages from the currently open chat.
 
-    Returns a list of message strings (best-effort, text-based extraction).
-    This reads the full page body and tries to extract recent message text.
+    Returns a list of dicts: {direction, sender, time, date, text}.
+    - direction: "in" (received) / "out" (sent by me) / "unknown"
+    - sender / time / date parsed from WA's data-pre-plain-text meta.
     """
-    body_text = await page.inner_text("body")
-    lines = [line.strip() for line in body_text.split("\n") if line.strip()]
-    # Return the last N non-empty lines as a rough approximation
-    return lines[-count:] if len(lines) > count else lines
+    return await page.evaluate(_READ_MESSAGES_JS, count)
+
+
+async def read_last_messages_text(page, count: int = 10) -> list[str]:
+    """Backward-compatible variant: return just the text of each message."""
+    msgs = await read_last_messages(page, count)
+    return [m["text"] for m in msgs]
+
+
+async def last_incoming_message(page, name_or_number: str) -> dict | None:
+    """Open a chat and return the last *received* (incoming) message.
+
+    Returns None if the chat has no incoming messages on screen.
+    """
+    await open_chat(page, name_or_number)
+    # read_last_messages returns chronological order; incoming = direction "in".
+    msgs = await read_last_messages(page, count=50)
+    for m in reversed(msgs):
+        if m["direction"] == "in":
+            return m
+    return None
+
+
+async def last_message(page, name_or_number: str) -> dict | None:
+    """Open a chat and return the very last message (any direction)."""
+    await open_chat(page, name_or_number)
+    msgs = await read_last_messages(page, count=5)
+    return msgs[-1] if msgs else None
