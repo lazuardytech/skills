@@ -29,9 +29,7 @@ class ChromeBrowser:
         chrome_path: str | None = None,
     ):
         if user_data_dir is None:
-            user_data_dir = os.path.join(
-                "/tmp", "whatsapp-web", "chrome_profile"
-            )
+            user_data_dir = os.path.join("/tmp", "whatsapp-web", "chrome_profile")
         self.user_data_dir = os.path.abspath(user_data_dir)
         self.cdp_port = cdp_port
         self.chrome_path = chrome_path or _CHROME_PATHS.get(platform.system())
@@ -41,9 +39,7 @@ class ChromeBrowser:
     def is_running(self) -> bool:
         """Check if Chrome is listening on the CDP port."""
         try:
-            urllib.request.urlopen(
-                f"http://localhost:{self.cdp_port}/json/version", timeout=2
-            )
+            urllib.request.urlopen(f"http://localhost:{self.cdp_port}/json/version", timeout=2)
             return True
         except Exception:
             return False
@@ -105,9 +101,7 @@ class ChromeBrowser:
                     return True
                 time.sleep(1)
 
-        raise BrowserLaunchError(
-            "WhatsApp Web didn't open in time. Please try again."
-        )
+        raise BrowserLaunchError("WhatsApp Web didn't open in time. Please try again.")
 
     async def connect(self, playwright):
         """Connect to Chrome via CDP. Returns (browser, context, page).
@@ -123,9 +117,7 @@ class ChromeBrowser:
                 "WhatsApp Web window isn't open yet. Please open it first."
             )
 
-        browser = await playwright.chromium.connect_over_cdp(
-            f"http://localhost:{self.cdp_port}"
-        )
+        browser = await playwright.chromium.connect_over_cdp(f"http://localhost:{self.cdp_port}")
         if not browser.contexts:
             raise BrowserNotRunningError(
                 "Couldn't connect to the WhatsApp Web window. Please try again."

@@ -26,9 +26,9 @@ POLL_INTERVAL = 5
 
 
 async def run(timeout: int, check_only: bool) -> dict:
+    from playwright.async_api import async_playwright
     from src import WhatsAppWeb
     from src.session import WhatsAppSession
-    from playwright.async_api import async_playwright
 
     wa = WhatsAppWeb()
 
@@ -53,14 +53,23 @@ async def run(timeout: int, check_only: bool) -> dict:
 
         if check_only:
             await wa.stop()
-            return {"state": state, "action": "Scan the QR code with your phone" if state == "qr_code" else None}
+            return {
+                "state": state,
+                "action": "Scan the QR code with your phone" if state == "qr_code" else None,
+            }
 
         if elapsed >= timeout:
             await wa.stop()
-            return {"state": "timeout", "error": f"Login didn't complete within {timeout}s"}
+            return {
+                "state": "timeout",
+                "error": f"Login didn't complete within {timeout}s",
+            }
 
         if state == "qr_code":
-            print(f"Please scan the QR code with your phone... ({elapsed}s/{timeout}s)", file=sys.stderr)
+            print(
+                f"Please scan the QR code with your phone... ({elapsed}s/{timeout}s)",
+                file=sys.stderr,
+            )
         elif state == "loading":
             print(f"Getting things ready... ({elapsed}s/{timeout}s)", file=sys.stderr)
         else:
@@ -72,7 +81,12 @@ async def run(timeout: int, check_only: bool) -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch WA Web and wait for login")
-    parser.add_argument("--timeout", type=int, default=300, help="Max wait time in seconds (default: 300)")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="Max wait time in seconds (default: 300)",
+    )
     parser.add_argument("--check", action="store_true", help="Check current state only, don't wait")
     args = parser.parse_args()
 

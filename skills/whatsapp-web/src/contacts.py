@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from .errors import ChatNotFoundError
+
 from .phone import extract_digits, format_phone_wa_variants
 
 logger = logging.getLogger("src.contacts")

@@ -82,9 +82,7 @@ class WhatsAppWeb:
         self._chrome.ensure_running()
         self._pw_cm = async_playwright()
         self._playwright = await self._pw_cm.__aenter__()
-        self._browser, self._context, self._page = await self._chrome.connect(
-            self._playwright
-        )
+        self._browser, self._context, self._page = await self._chrome.connect(self._playwright)
         self._session = WhatsAppSession(self._page)
         await self._session.ensure_ready()
 

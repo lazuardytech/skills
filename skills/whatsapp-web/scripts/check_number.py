@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 async def main(phones: list[str]) -> dict[str, bool]:
-    from src import WhatsAppWeb, LoginRequiredError
+    from src import LoginRequiredError, WhatsAppWeb
 
     try:
         async with WhatsAppWeb() as wa:

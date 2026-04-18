@@ -40,9 +40,7 @@ class WhatsAppSession:
         try:
             if "web.whatsapp.com" not in self.page.url:
                 logger.info("Opening WhatsApp Web...")
-                await self.page.goto(
-                    "https://web.whatsapp.com", wait_until="domcontentloaded"
-                )
+                await self.page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
                 await asyncio.sleep(5)
                 return
 
@@ -93,7 +91,11 @@ class WhatsAppSession:
                 logger.info("WhatsApp Web is ready")
                 return True
             if state == "qr_code":
-                logger.info("Please scan the QR code with your phone... (%ds/%ds)", elapsed, timeout)
+                logger.info(
+                    "Please scan the QR code with your phone... (%ds/%ds)",
+                    elapsed,
+                    timeout,
+                )
             await asyncio.sleep(interval)
             elapsed += interval
 

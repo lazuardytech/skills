@@ -5,7 +5,7 @@ import re
 
 def extract_digits(phone: str) -> str:
     """Strip all non-digit characters from a phone string."""
-    return re.sub(r'[^\d]', '', phone)
+    return re.sub(r"[^\d]", "", phone)
 
 
 def normalize_phone(phone: str, country_code: str = "62") -> str:
@@ -15,7 +15,7 @@ def normalize_phone(phone: str, country_code: str = "62") -> str:
     - If no country code prefix, it's prepended
     """
     p = extract_digits(phone)
-    if p.startswith('0'):
+    if p.startswith("0"):
         p = country_code + p[1:]
     elif not p.startswith(country_code):
         p = country_code + p
@@ -31,7 +31,7 @@ def format_phone_wa(phone: str, country_code: str = "62") -> str:
         "811289848"    -> "+62 811-289-848"
     """
     p = normalize_phone(phone, country_code)
-    digits = p[len(country_code):]
+    digits = p[len(country_code) :]
     prefix = f"+{country_code} "
     if len(digits) >= 9:
         # 3-3-rest grouping (default WA display for most Indonesian numbers)
@@ -48,14 +48,14 @@ def format_phone_wa_variants(phone: str, country_code: str = "62") -> list[str]:
         11 digits: 3-3-5 or 3-4-4
     """
     p = normalize_phone(phone, country_code)
-    digits = p[len(country_code):]
+    digits = p[len(country_code) :]
     prefix = f"+{country_code} "
 
     if len(digits) < 9:
         return [f"{prefix}{digits}"]
 
     variants = {
-        f"{prefix}{digits[:3]}-{digits[3:6]}-{digits[6:]}",   # 3-3-rest
-        f"{prefix}{digits[:3]}-{digits[3:7]}-{digits[7:]}",   # 3-4-rest
+        f"{prefix}{digits[:3]}-{digits[3:6]}-{digits[6:]}",  # 3-3-rest
+        f"{prefix}{digits[:3]}-{digits[3:7]}-{digits[7:]}",  # 3-4-rest
     }
     return list(variants)
