@@ -1,6 +1,6 @@
 ---
 name: whatsapp-web
-description: WhatsApp Web automation via Playwright and Chrome CDP. Use when the user needs to open WhatsApp Web, launch the WhatsApp Web browser, verify phone numbers on WhatsApp, send WhatsApp messages, read recent chat messages or chat history, list chats in the sidebar, count chats, count pinned chats, check if a number is registered on WhatsApp, automate WhatsApp Web login, or perform bulk number verification. Triggers include requests to "open WhatsApp Web", "buka WhatsApp Web", "launch WhatsApp", "check this number on WhatsApp", "send a WhatsApp message", "verify WhatsApp numbers", "read WhatsApp messages", "list WhatsApp messages", "show recent WhatsApp chat", "ambil pesan WhatsApp", "open WhatsApp chat", "batch check numbers", "list my WhatsApp chats", "ada berapa chat", "berapa pinned chat", "show pinned chats", or any task requiring programmatic WhatsApp Web interaction. For any "open/launch/buka WhatsApp Web" request, run `scripts/login.py` WITHOUT `--wait` — the script exits immediately after opening the window so the agent stays responsive. Never use `--wait` unless the user explicitly asks the agent to wait for them to sign in. For reading messages, run `scripts/read_messages.py --from <name>`. For listing chats, run `scripts/list_chats.py`. For pinned chats, run `scripts/list_pinned.py`. Always keep responses to the user friendly and non-technical (say "Opening WhatsApp Web..." instead of "Starting Chrome with CDP").
+description: WhatsApp Web automation via Playwright and Chrome CDP. Use when the user needs to open WhatsApp Web, launch the WhatsApp Web browser, verify phone numbers on WhatsApp, send WhatsApp messages, read recent chat messages or chat history, list chats in the sidebar, count chats, count pinned chats, list unread chats, count unread messages, check if a number is registered on WhatsApp, automate WhatsApp Web login, or perform bulk number verification. Triggers include requests to "open WhatsApp Web", "buka WhatsApp Web", "launch WhatsApp", "check this number on WhatsApp", "send a WhatsApp message", "verify WhatsApp numbers", "read WhatsApp messages", "list WhatsApp messages", "show recent WhatsApp chat", "ambil pesan WhatsApp", "open WhatsApp chat", "batch check numbers", "list my WhatsApp chats", "ada berapa chat", "berapa pinned chat", "show pinned chats", "ada berapa chat yang belum dibaca", "unread chats", "pesan yang belum dibaca", "how many unread messages", or any task requiring programmatic WhatsApp Web interaction. For any "open/launch/buka WhatsApp Web" request, run `scripts/login.py` WITHOUT `--wait` — the script exits immediately after opening the window so the agent stays responsive. Never use `--wait` unless the user explicitly asks the agent to wait for them to sign in. For reading messages, run `scripts/read_messages.py --from <name>`. For listing chats, run `scripts/list_chats.py`. For pinned chats, run `scripts/list_pinned.py`. For unread chats, run `scripts/list_unread.py`. Always keep responses to the user friendly and non-technical (say "Opening WhatsApp Web..." instead of "Starting Chrome with CDP").
 license: Proprietary
 compatibility: Requires Python 3.10+, Google Chrome, and Playwright. macOS or Linux only.
 metadata:
@@ -77,6 +77,28 @@ python3 scripts/list_pinned.py
 Output: `{"count": 2, "chats": [{"name": "...", "preview": "...", "pinned": true}, ...]}`
 
 WhatsApp Web allows at most 3 pinned chats.
+
+### List unread chats / count unread messages
+
+```bash
+python3 scripts/list_unread.py                 # scan top 50 rows
+python3 scripts/list_unread.py --limit 100     # scan deeper
+python3 scripts/list_unread.py --count-only    # just the totals
+```
+
+Output:
+
+```json
+{
+  "chat_count": 3,
+  "message_count": 46,
+  "chats": [
+    {"name": "LT Marketing Team", "unread_count": 33, "unread": true, "pinned": false, ...}
+  ]
+}
+```
+
+`chat_count` = number of chats with unread messages; `message_count` = sum of per-chat unread counts. Only chats whose rows are scanned are counted — raise `--limit` if you have many chats and want to look deeper.
 
 ### Open WhatsApp Web / check login state
 

@@ -17,9 +17,11 @@ from .browser import ChromeBrowser
 from .chat import chat_list_total_count as _chat_list_total_count
 from .chat import list_chats as _list_chats
 from .chat import list_pinned_chats as _list_pinned_chats
+from .chat import list_unread_chats as _list_unread_chats
 from .chat import open_chat as _open_chat
 from .chat import read_last_messages as _read_last_messages
 from .chat import send_message as _send_message
+from .chat import unread_summary as _unread_summary
 from .contacts import check_number as _check_number
 from .errors import (
     BrowserLaunchError,
@@ -166,6 +168,14 @@ class WhatsAppWeb:
     async def chat_list_total_count(self) -> int:
         """Return the total number of chats in the sidebar."""
         return await _chat_list_total_count(self._page)
+
+    async def list_unread_chats(self, limit: int = 50) -> list[dict]:
+        """List chats with unread messages (within the top `limit` rows)."""
+        return await _list_unread_chats(self._page, limit)
+
+    async def unread_summary(self, limit: int = 50) -> dict:
+        """Return unread chat count, total unread messages, and the chats."""
+        return await _unread_summary(self._page, limit)
 
     # --- Session state ---
 

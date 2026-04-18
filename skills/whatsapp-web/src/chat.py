@@ -2,11 +2,20 @@
 
 import asyncio
 import logging
+import re
 
 from .contacts import close_search, find_contact
 from .errors import ChatNotFoundError
 
 logger = logging.getLogger("src.chat")
+
+# Matches aria-labels like "3 unread messages", "1 unread message",
+# "3 pesan belum dibaca", "unread" (muted chats marked unread w/o count).
+_UNREAD_ARIA_RE = re.compile(
+    r"(\d+)\s+(?:unread|pesan\s+belum\s+dibaca)|unread\b|belum\s+dibaca",
+    re.IGNORECASE,
+)
+_UNREAD_COUNT_RE = re.compile(r"(\d+)\s+(?:unread|pesan\s+belum\s+dibaca)", re.IGNORECASE)
 
 
 # JS snippet that reads the currently-rendered chat rows from #pane-side.
@@ -49,6 +58,33 @@ def _row_is_pinned(row: dict) -> bool:
     titles = row.get("svgTitles") or []
     markers = set(icons) | set(titles)
     return any("push-pin" in m or "pinned" in m.lower() for m in markers)
+
+
+def _row_unread(row: dict) -> tuple[bool, int]:
+    """Return (is_unread, unread_count).
+
+    - Numeric count comes from the aria-label "N unread messages" or from
+      the row text. Missing count (e.g. "unread" on a muted chat marked
+      unread manually) is treated as unread with count 0.
+    """
+    aria_labels = row.get("ariaLabels") or []
+    text = row.get("text") or ""
+
+    for label in aria_labels:
+        m = _UNREAD_COUNT_RE.search(label)
+        if m:
+            return True, int(m.group(1))
+        if _UNREAD_ARIA_RE.search(label):
+            return True, 0
+
+    # Fallback to row text — first line is often "N unread messages".
+    m = _UNREAD_COUNT_RE.search(text)
+    if m:
+        return True, int(m.group(1))
+    if _UNREAD_ARIA_RE.search(text):
+        return True, 0
+
+    return False, 0
 
 
 def _row_display_name(row: dict) -> str:
@@ -102,11 +138,14 @@ async def list_chats(page, limit: int = 50) -> list[dict]:
             text = row.get("text", "")
             lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
             preview = lines[-1] if len(lines) >= 2 else ""
+            is_unread, unread_count = _row_unread(row)
             ordered.append(
                 {
                     "name": name,
                     "preview": preview,
                     "pinned": _row_is_pinned(row),
+                    "unread": is_unread,
+                    "unread_count": unread_count,
                     "raw": text,
                 }
             )
@@ -168,17 +207,41 @@ async def list_pinned_chats(page) -> list[dict]:
         text = row.get("text", "")
         lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
         preview = lines[-1] if len(lines) >= 2 else ""
+        is_unread, unread_count = _row_unread(row)
         result.append(
             {
                 "name": name,
                 "preview": preview,
                 "pinned": True,
+                "unread": is_unread,
+                "unread_count": unread_count,
                 "raw": text,
             }
         )
         if len(result) >= 3:
             break
     return result
+
+
+async def list_unread_chats(page, limit: int = 50) -> list[dict]:
+    """Return chats with unread messages, scanning the top `limit` rows.
+
+    Uses list_chats() internally and filters. Pass a larger limit to cover
+    deeper parts of the sidebar if you have many chats.
+    """
+    chats = await list_chats(page, limit=limit)
+    return [c for c in chats if c.get("unread")]
+
+
+async def unread_summary(page, limit: int = 50) -> dict:
+    """Return {'chat_count', 'message_count', 'chats'} for unread chats."""
+    unread = await list_unread_chats(page, limit=limit)
+    total_msgs = sum(c.get("unread_count") or 0 for c in unread)
+    return {
+        "chat_count": len(unread),
+        "message_count": total_msgs,
+        "chats": unread,
+    }
 
 
 async def chat_list_total_count(page) -> int:
