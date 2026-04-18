@@ -14,6 +14,9 @@ import logging
 from playwright.async_api import async_playwright
 
 from .browser import ChromeBrowser
+from .chat import chat_list_total_count as _chat_list_total_count
+from .chat import list_chats as _list_chats
+from .chat import list_pinned_chats as _list_pinned_chats
 from .chat import open_chat as _open_chat
 from .chat import read_last_messages as _read_last_messages
 from .chat import send_message as _send_message
@@ -149,6 +152,20 @@ class WhatsAppWeb:
     async def read_last_messages(self, count: int = 10) -> list[str]:
         """Read the last visible messages from the currently open chat."""
         return await _read_last_messages(self._page, count)
+
+    # --- Chat list ---
+
+    async def list_chats(self, limit: int = 50) -> list[dict]:
+        """List up to `limit` chats from the top of the sidebar."""
+        return await _list_chats(self._page, limit)
+
+    async def list_pinned_chats(self) -> list[dict]:
+        """List pinned chats (max 3 on WhatsApp Web)."""
+        return await _list_pinned_chats(self._page)
+
+    async def chat_list_total_count(self) -> int:
+        """Return the total number of chats in the sidebar."""
+        return await _chat_list_total_count(self._page)
 
     # --- Session state ---
 
