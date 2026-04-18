@@ -31,20 +31,30 @@ class WhatsAppSession:
         self.page = page
 
     async def navigate(self) -> None:
-        """Navigate to WhatsApp Web (or reload if already there)."""
+        """Ensure the page is on WhatsApp Web.
+
+        - Not on WA Web → goto.
+        - Already on WA Web and logged in → no-op (don't spam reloads).
+        - Already on WA Web but not yet ready → reload.
+        """
         try:
             if "web.whatsapp.com" not in self.page.url:
-                logger.info("Navigating to WhatsApp Web...")
+                logger.info("Opening WhatsApp Web...")
                 await self.page.goto(
                     "https://web.whatsapp.com", wait_until="domcontentloaded"
                 )
                 await asyncio.sleep(5)
-            else:
-                logger.info("Already on WhatsApp Web, reloading...")
-                await self.page.reload(wait_until="domcontentloaded")
-                await asyncio.sleep(3)
+                return
+
+            state = await self.get_login_state()
+            if state == "logged_in":
+                logger.info("WhatsApp Web is already open and ready")
+                return
+            logger.info("Refreshing WhatsApp Web...")
+            await self.page.reload(wait_until="domcontentloaded")
+            await asyncio.sleep(3)
         except Exception as e:
-            raise NavigationError(f"Failed to navigate to WhatsApp Web: {e}") from e
+            raise NavigationError(f"Couldn't open WhatsApp Web: {e}") from e
 
     async def get_login_state(self) -> str:
         """Detect current login state.
@@ -80,16 +90,16 @@ class WhatsAppSession:
         while elapsed < timeout:
             state = await self.get_login_state()
             if state == "logged_in":
-                logger.info("WhatsApp Web is logged in")
+                logger.info("WhatsApp Web is ready")
                 return True
             if state == "qr_code":
-                logger.info("QR code detected — waiting for scan... (%ds/%ds)", elapsed, timeout)
+                logger.info("Please scan the QR code with your phone... (%ds/%ds)", elapsed, timeout)
             await asyncio.sleep(interval)
             elapsed += interval
 
         raise LoginRequiredError(
-            f"WhatsApp Web login timed out after {timeout}s. "
-            "Please scan the QR code from your phone."
+            f"We didn't detect a successful login within {timeout}s. "
+            "Please scan the QR code with your phone and try again."
         )
 
     async def ensure_ready(self) -> None:
@@ -101,19 +111,19 @@ class WhatsAppSession:
         state = await self.get_login_state()
 
         if state == "loading":
-            logger.info("WhatsApp Web is loading, waiting...")
+            logger.info("Getting WhatsApp Web ready...")
             await asyncio.sleep(10)
             state = await self.get_login_state()
 
         if state == "qr_code":
             raise LoginRequiredError(
-                "WhatsApp Web requires QR code login. "
-                "Please scan the QR code from your phone, then call wait_for_login()."
+                "WhatsApp Web needs you to sign in. "
+                "Please scan the QR code with your phone, then try again."
             )
 
         if state == "logged_in":
-            logger.info("WhatsApp Web session is ready")
+            logger.info("WhatsApp Web is ready")
             return
 
         # "unknown" — might be logged in with different locale, proceed optimistically
-        logger.warning("Could not confirm login state (got %r), proceeding anyway", state)
+        logger.warning("Couldn't fully confirm WhatsApp Web is ready, continuing anyway")

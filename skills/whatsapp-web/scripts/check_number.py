@@ -28,8 +28,8 @@ async def main(phones: list[str]) -> dict[str, bool]:
             results = await wa.check_numbers(phones)
             return results
     except LoginRequiredError:
-        print("ERROR: WhatsApp Web requires QR code login.", file=sys.stderr)
-        print("Run: python3 scripts/login.py --wait", file=sys.stderr)
+        print("WhatsApp Web needs you to sign in first.", file=sys.stderr)
+        print("Run: python3 scripts/login.py", file=sys.stderr)
         sys.exit(1)
 
 

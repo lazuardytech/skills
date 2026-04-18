@@ -1,5 +1,6 @@
 """Chrome lifecycle management via CDP (Chrome DevTools Protocol)."""
 
+import fcntl
 import logging
 import os
 import platform
@@ -48,52 +49,64 @@ class ChromeBrowser:
             return False
 
     def ensure_running(self) -> bool:
-        """Start Chrome if not already running. Returns True when ready."""
+        """Start Chrome if not already running. Returns True when ready.
+
+        Fast path: if CDP port is live, return immediately — don't spawn.
+        Slow path: take an exclusive lockfile so parallel script invocations
+        can't race and spawn two Chrome processes for the same profile.
+        """
         if self.is_running():
-            logger.info("Chrome already running on port %d", self.cdp_port)
+            logger.info("Reusing the existing WhatsApp Web window")
             return True
 
         if not self.chrome_path or not os.path.exists(self.chrome_path):
             raise BrowserLaunchError(
-                f"Chrome not found at {self.chrome_path!r}. "
-                "Set chrome_path explicitly."
+                "Couldn't find Google Chrome on this machine. "
+                "Please install Chrome, or set chrome_path explicitly."
             )
 
-        logger.info("Starting Chrome with CDP on port %d ...", self.cdp_port)
-        # Detach Chrome from the parent process so it survives script exit.
-        # This ensures subsequent script invocations reuse the same Chrome
-        # window instead of spawning a new one.
-        # Force a separate Chrome instance from the user's default profile:
-        # - dedicated --user-data-dir + --profile-directory
-        # - --no-first-run / --no-default-browser-check suppress first-run UI
-        # - --new-window opens a fresh window even if another Chrome is running
-        subprocess.Popen(
-            [
-                self.chrome_path,
-                f"--user-data-dir={self.user_data_dir}",
-                "--profile-directory=Default",
-                f"--remote-debugging-port={self.cdp_port}",
-                "--disable-blink-features=AutomationControlled",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--new-window",
-                "https://web.whatsapp.com",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True,
-            close_fds=True,
-        )
-
-        for _ in range(15):
+        os.makedirs(self.user_data_dir, exist_ok=True)
+        lock_path = os.path.join(self.user_data_dir, ".skill-launch.lock")
+        with open(lock_path, "w") as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            # Re-check under lock — another process may have just launched Chrome.
             if self.is_running():
-                logger.info("Chrome ready")
+                logger.info("Another request just opened the window, reusing it")
                 return True
-            time.sleep(1)
+
+            logger.info("Opening a new WhatsApp Web window...")
+            # Detach Chrome from the parent process so it survives script exit.
+            # Force a separate Chrome instance from the user's default profile:
+            # - dedicated --user-data-dir + --profile-directory
+            # - --no-first-run / --no-default-browser-check suppress first-run UI
+            # - --new-window opens a fresh window even if another Chrome is running
+            subprocess.Popen(
+                [
+                    self.chrome_path,
+                    f"--user-data-dir={self.user_data_dir}",
+                    "--profile-directory=Default",
+                    f"--remote-debugging-port={self.cdp_port}",
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--new-window",
+                    "https://web.whatsapp.com",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+            )
+
+            for _ in range(15):
+                if self.is_running():
+                    logger.info("WhatsApp Web window is ready")
+                    return True
+                time.sleep(1)
 
         raise BrowserLaunchError(
-            f"Chrome did not start within 15 seconds on port {self.cdp_port}"
+            "WhatsApp Web didn't open in time. Please try again."
         )
 
     async def connect(self, playwright):
@@ -107,8 +120,7 @@ class ChromeBrowser:
         """
         if not self.is_running():
             raise BrowserNotRunningError(
-                f"Chrome is not running on port {self.cdp_port}. "
-                "Call ensure_running() first."
+                "WhatsApp Web window isn't open yet. Please open it first."
             )
 
         browser = await playwright.chromium.connect_over_cdp(
@@ -116,7 +128,7 @@ class ChromeBrowser:
         )
         if not browser.contexts:
             raise BrowserNotRunningError(
-                "Chrome is running but exposes no browser contexts via CDP."
+                "Couldn't connect to the WhatsApp Web window. Please try again."
             )
         context = browser.contexts[0]
 
@@ -133,7 +145,7 @@ class ChromeBrowser:
         if page is None and context.pages:
             page = context.pages[0]
         if page is None:
-            logger.info("No existing tab found, creating a new one")
+            logger.info("Opening a new tab")
             page = await context.new_page()
 
         self._browser = browser

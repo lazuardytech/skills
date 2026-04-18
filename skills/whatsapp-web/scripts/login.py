@@ -32,7 +32,7 @@ async def run(timeout: int, check_only: bool) -> dict:
 
     wa = WhatsAppWeb()
 
-    print("Starting Chrome...", file=sys.stderr)
+    print("Opening WhatsApp Web...", file=sys.stderr)
     wa._chrome.ensure_running()
 
     wa._pw_cm = async_playwright()
@@ -40,7 +40,6 @@ async def run(timeout: int, check_only: bool) -> dict:
     wa._browser, wa._context, wa._page = await wa._chrome.connect(wa._playwright)
     wa._session = WhatsAppSession(wa._page)
 
-    print("Navigating to web.whatsapp.com...", file=sys.stderr)
     await wa._session.navigate()
 
     elapsed = 0
@@ -48,24 +47,24 @@ async def run(timeout: int, check_only: bool) -> dict:
         state = await wa._session.get_login_state()
 
         if state == "logged_in":
-            print("Logged in. WhatsApp Web is ready.", file=sys.stderr)
+            print("WhatsApp Web is ready.", file=sys.stderr)
             await wa.stop()
             return {"state": "logged_in"}
 
         if check_only:
             await wa.stop()
-            return {"state": state, "action": "Scan QR code from your phone" if state == "qr_code" else None}
+            return {"state": state, "action": "Scan the QR code with your phone" if state == "qr_code" else None}
 
         if elapsed >= timeout:
             await wa.stop()
-            return {"state": "timeout", "error": f"Login timed out after {timeout}s"}
+            return {"state": "timeout", "error": f"Login didn't complete within {timeout}s"}
 
         if state == "qr_code":
-            print(f"[{elapsed}s/{timeout}s] Waiting for QR code scan...", file=sys.stderr)
+            print(f"Please scan the QR code with your phone... ({elapsed}s/{timeout}s)", file=sys.stderr)
         elif state == "loading":
-            print(f"[{elapsed}s/{timeout}s] WhatsApp Web loading...", file=sys.stderr)
+            print(f"Getting things ready... ({elapsed}s/{timeout}s)", file=sys.stderr)
         else:
-            print(f"[{elapsed}s/{timeout}s] State: {state}", file=sys.stderr)
+            print(f"Still waiting... ({elapsed}s/{timeout}s)", file=sys.stderr)
 
         await asyncio.sleep(POLL_INTERVAL)
         elapsed += POLL_INTERVAL

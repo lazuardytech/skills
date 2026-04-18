@@ -27,11 +27,11 @@ async def main(to: str, message: str) -> dict:
             await wa.send_message(to, message)
             return {"status": "sent", "to": to}
     except LoginRequiredError:
-        print("ERROR: WhatsApp Web requires QR code login.", file=sys.stderr)
-        print("Run: python3 scripts/login.py --wait", file=sys.stderr)
+        print("WhatsApp Web needs you to sign in first.", file=sys.stderr)
+        print("Run: python3 scripts/login.py", file=sys.stderr)
         sys.exit(1)
     except ChatNotFoundError:
-        print(f"ERROR: Contact not found: {to!r}", file=sys.stderr)
+        print(f"Couldn't find a contact named {to!r}.", file=sys.stderr)
         sys.exit(2)
 
 
