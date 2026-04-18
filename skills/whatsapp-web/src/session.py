@@ -7,20 +7,51 @@ from .errors import LoginRequiredError, NavigationError
 
 logger = logging.getLogger("src.session")
 
-# Text patterns used to detect WhatsApp Web login state (case-insensitive)
+# DOM selectors checked first — resilient to WA Web copy changes and locale.
+_LOGGED_IN_SELECTORS = [
+    "#pane-side",  # Left chat-list pane
+    'div[aria-label="Chat list"]',
+    'div[aria-label="Daftar chat"]',  # id
+    'header[data-testid="chatlist-header"]',
+    'div[data-testid="chat-list"]',
+    '[data-testid="menu-bar-menu"]',
+]
+_QR_SELECTORS = [
+    'canvas[aria-label*="Scan"]',
+    'canvas[aria-label*="scan"]',
+    "div[data-ref]",  # QR container has data-ref attr
+    'canvas[role="img"]',
+]
+
+# Text fallbacks — multi-language. Used only when DOM check is inconclusive.
 _QR_PATTERNS = [
     "link a device",
     "use whatsapp on your computer",
     "phone to scan",
     "scan this qr",
+    "scan the qr",
     "log in with phone number",
+    # Indonesian
+    "tautkan perangkat",
+    "gunakan whatsapp di komputer",
+    "pindai kode qr",
+    "masuk dengan nomor telepon",
 ]
 _LOGGED_IN_PATTERNS = [
     "search or start new chat",
     "search or start a new chat",
+    # Indonesian
+    "cari atau mulai chat baru",
+    "cari atau mulai obrolan baru",
+    # Generic
+    "archived",
+    "diarsipkan",
 ]
 _LOADING_PATTERNS = [
     "connecting",
+    "menghubungkan",
+    "loading your chats",
+    "memuat obrolan",
 ]
 
 
@@ -79,26 +110,48 @@ class WhatsAppSession:
     async def get_login_state(self) -> str:
         """Detect current login state.
 
-        Returns one of: "logged_in", "qr_code", "loading", "unknown"
+        Returns one of: "logged_in", "qr_code", "loading", "unknown".
+
+        Strategy: DOM selectors first (language-agnostic and resilient to
+        UI copy changes), text-body fallback second.
         """
+        # --- DOM-first detection ---
+        if await self._any_selector_matches(_LOGGED_IN_SELECTORS):
+            return "logged_in"
+        if await self._any_selector_matches(_QR_SELECTORS):
+            # QR surface can also appear briefly while logged-in page still
+            # booting — ensure no chat-list is present before calling it qr_code.
+            if not await self._any_selector_matches(_LOGGED_IN_SELECTORS):
+                return "qr_code"
+
+        # --- Text fallback ---
         try:
             body_text = (await self.page.inner_text("body")).lower()
         except Exception:
             return "unknown"
 
-        for pattern in _QR_PATTERNS:
-            if pattern in body_text:
-                return "qr_code"
-
         for pattern in _LOGGED_IN_PATTERNS:
             if pattern in body_text:
                 return "logged_in"
-
+        for pattern in _QR_PATTERNS:
+            if pattern in body_text:
+                return "qr_code"
         for pattern in _LOADING_PATTERNS:
             if pattern in body_text:
                 return "loading"
 
         return "unknown"
+
+    async def _any_selector_matches(self, selectors: list[str]) -> bool:
+        """Return True if any of the given CSS selectors is attached to DOM."""
+        for sel in selectors:
+            try:
+                loc = self.page.locator(sel).first
+                if await loc.count() > 0:
+                    return True
+            except Exception:
+                continue
+        return False
 
     async def wait_for_login(self, timeout: int = 120) -> bool:
         """Poll until logged in or timeout.
