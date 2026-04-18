@@ -30,18 +30,23 @@ class WhatsAppSession:
     def __init__(self, page):
         self.page = page
 
-    async def navigate(self) -> None:
-        """Ensure the page is on WhatsApp Web.
+    async def navigate(self, settle_timeout: float = 6.0) -> None:
+        """Ensure the page is on WhatsApp Web, settling only as long as needed.
 
-        - Not on WA Web → goto.
-        - Already on WA Web and logged in → no-op (don't spam reloads).
-        - Already on WA Web but not yet ready → reload.
+        - Not on WA Web → goto, then poll until logged_in/qr_code (fast exit).
+        - Already on WA Web and logged in → no-op.
+        - Already on WA Web but not yet ready → reload + poll.
+
+        The settle loop polls every 0.5s and returns as soon as we detect a
+        terminal state. Upper bound = settle_timeout (default 6s). That way
+        a logged-in session exits in ~0.5s, while a first-load QR state also
+        exits as soon as the QR renders.
         """
         try:
             if "web.whatsapp.com" not in self.page.url:
                 logger.info("Opening WhatsApp Web...")
                 await self.page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
-                await asyncio.sleep(5)
+                await self._settle(settle_timeout)
                 return
 
             state = await self.get_login_state()
@@ -50,9 +55,26 @@ class WhatsAppSession:
                 return
             logger.info("Refreshing WhatsApp Web...")
             await self.page.reload(wait_until="domcontentloaded")
-            await asyncio.sleep(3)
+            await self._settle(settle_timeout)
         except Exception as e:
             raise NavigationError(f"Couldn't open WhatsApp Web: {e}") from e
+
+    async def _settle(self, timeout: float) -> str:
+        """Poll login state until it stabilises or timeout.
+
+        Returns the last observed state. A logged-in or qr_code state is
+        considered terminal and returns immediately.
+        """
+        interval = 0.5
+        elapsed = 0.0
+        state = "unknown"
+        while elapsed < timeout:
+            state = await self.get_login_state()
+            if state in ("logged_in", "qr_code"):
+                return state
+            await asyncio.sleep(interval)
+            elapsed += interval
+        return state
 
     async def get_login_state(self) -> str:
         """Detect current login state.
@@ -114,8 +136,7 @@ class WhatsAppSession:
 
         if state == "loading":
             logger.info("Getting WhatsApp Web ready...")
-            await asyncio.sleep(10)
-            state = await self.get_login_state()
+            state = await self._settle(timeout=10.0)
 
         if state == "qr_code":
             raise LoginRequiredError(
