@@ -198,5 +198,6 @@ skills/whatsapp-web/
 - **DOM-first login detection** — Primary signals are DOM selectors (`#pane-side`, chat-list aria-labels); text matching is a fallback. Survives locale switches (English/Indonesian).
 - **Virtualized chat list** — WA only renders visible rows, so `list_chats()` incrementally scrolls the sidebar grid and dedupes by display name.
 - **Structured message parsing** — Reads WA's `data-pre-plain-text="[time, date] Sender: "` attribute and walks ancestors for `.message-in` / `.message-out` to detect direction. No CSS-selector chains, resilient to WA Web DOM churn.
-- **Anti-ban delay** — Configurable `between_delay` (default 3s) between operations. Chrome is never killed by the skill.
+- **DOM-driven waits** — Search, chat-open, and message-send use `wait_for_function` against DOM predicates (results rendered, chat header + composer present, composer cleared post-send) instead of fixed sleeps. Operations return as soon as WA is actually ready.
+- **Anti-ban delay** — Configurable `between_delay` (default 0.75s) applied only between consecutive user-visible writes in a batch (e.g. `check_numbers` loop). Single-shot calls skip it entirely. Set to `0` for read-heavy scripts. Chrome is never killed by the skill.
 - **Phone formatting** — Defaults to Indonesian numbers (+62); multiple format variants are tried during verification for accuracy.

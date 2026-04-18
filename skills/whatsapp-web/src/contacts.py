@@ -7,7 +7,34 @@ from .phone import extract_digits, format_phone_wa_variants
 
 logger = logging.getLogger("src.contacts")
 
-DEFAULT_SEARCH_WAIT = 5.0
+DEFAULT_SEARCH_WAIT = 2.5
+
+# JS: true once the search dialog has finished reacting to the query —
+# either results rendered, or an explicit "no result" message is shown.
+# Using document-level text because WA Web's result list selector shifts.
+_SEARCH_READY_JS = r"""
+() => {
+    const body = document.body?.innerText || '';
+    const low = body.toLowerCase();
+    if (low.includes('no result found') || low.includes('no results found')
+        || low.includes('tidak ada hasil')) return true;
+    // Result rows appear inside a listbox/grid inside the dialog.
+    const items = document.querySelectorAll(
+        '[role="listbox"] [role="option"], [role="listbox"] [role="listitem"], '
+        + 'div[role="dialog"] [role="row"]'
+    );
+    return items.length > 0;
+}
+"""
+
+
+async def _wait_for(page, js: str, timeout_s: float, poll_s: float = 0.1) -> bool:
+    """Poll a JS predicate until truthy or timeout. Returns whether it became truthy."""
+    try:
+        await page.wait_for_function(js, timeout=int(timeout_s * 1000), polling=int(poll_s * 1000))
+        return True
+    except Exception:
+        return False
 
 
 async def search_contact(page, query: str, wait: float = DEFAULT_SEARCH_WAIT) -> str:
@@ -16,16 +43,18 @@ async def search_contact(page, query: str, wait: float = DEFAULT_SEARCH_WAIT) ->
     The caller is responsible for calling close_search() afterwards.
     """
     await page.keyboard.press("Meta+Control+n")
-    await asyncio.sleep(1.5)
+    # Dialog render is fast; short floor + DOM check keeps us correct.
+    await asyncio.sleep(0.25)
     await page.keyboard.type(query)
-    await asyncio.sleep(wait)
+    # Wait for results (or explicit no-result message) instead of fixed sleep.
+    await _wait_for(page, _SEARCH_READY_JS, timeout_s=wait)
     return await page.inner_text("body")
 
 
 async def close_search(page) -> None:
     """Dismiss the search dialog by pressing Escape."""
     await page.keyboard.press("Escape")
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.1)
 
 
 async def check_number(page, phone: str, wait: float = DEFAULT_SEARCH_WAIT) -> bool:

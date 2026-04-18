@@ -59,7 +59,10 @@ class WhatsAppWeb:
         chrome_profile_dir: Path to Chrome user data directory.
         cdp_port: Chrome DevTools Protocol port (default 9222).
         chrome_path: Path to Chrome executable (auto-detected if None).
-        between_delay: Seconds to wait between consecutive operations (anti-ban).
+        between_delay: Seconds to wait between consecutive user-visible
+            operations (anti-ban). Only applied between calls that type,
+            send, or open chats — not read-only operations. Set to 0 for
+            no inter-op delay (e.g. read-heavy scripts).
     """
 
     def __init__(
@@ -67,7 +70,7 @@ class WhatsAppWeb:
         chrome_profile_dir: str | None = None,
         cdp_port: int = 9222,
         chrome_path: str | None = None,
-        between_delay: float = 3.0,
+        between_delay: float = 0.75,
     ):
         self._chrome = ChromeBrowser(
             user_data_dir=chrome_profile_dir,
@@ -126,17 +129,17 @@ class WhatsAppWeb:
 
     async def check_number(self, phone: str) -> bool:
         """Check if a phone number is registered on WhatsApp."""
-        result = await _check_number(self._page, phone)
-        await asyncio.sleep(self._between_delay)
-        return result
+        return await _check_number(self._page, phone)
 
     async def check_numbers(self, phones: list[str]) -> dict[str, bool]:
         """Batch-check multiple phone numbers.
 
         Returns a dict mapping phone -> True/False.
         """
-        results = {}
-        for phone in phones:
+        results: dict[str, bool] = {}
+        for i, phone in enumerate(phones):
+            if i > 0 and self._between_delay > 0:
+                await asyncio.sleep(self._between_delay)
             results[phone] = await self.check_number(phone)
         return results
 
@@ -144,15 +147,11 @@ class WhatsAppWeb:
 
     async def open_chat(self, name_or_number: str) -> bool:
         """Open a chat with a contact by name or phone number."""
-        result = await _open_chat(self._page, name_or_number)
-        await asyncio.sleep(self._between_delay)
-        return result
+        return await _open_chat(self._page, name_or_number)
 
     async def send_message(self, to: str, message: str) -> bool:
         """Send a message to a contact."""
-        result = await _send_message(self._page, to, message)
-        await asyncio.sleep(self._between_delay)
-        return result
+        return await _send_message(self._page, to, message)
 
     async def read_last_messages(self, count: int = 10) -> list[dict]:
         """Read the last visible messages from the currently open chat.

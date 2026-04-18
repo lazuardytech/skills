@@ -4,8 +4,34 @@ import asyncio
 import logging
 import re
 
-from .contacts import close_search, find_contact
+from .contacts import _wait_for, close_search, find_contact
 from .errors import ChatNotFoundError
+
+# JS: true once the main chat pane shows a conversation header (contact name
+# and the message composer area). We don't rely on a specific selector chain
+# because WA rewrites them often — header + footer composer presence is enough.
+_CHAT_OPEN_JS = r"""
+() => {
+    const main = document.querySelector('#main');
+    if (!main) return false;
+    const header = main.querySelector('header');
+    const footer = main.querySelector('footer');
+    // Composer is a contenteditable div inside the footer.
+    const composer = footer?.querySelector('div[contenteditable="true"]');
+    return !!(header && composer);
+}
+"""
+
+# JS: the composer is empty again after a send. Combined with a small floor
+# this is more reliable than waiting on a send-tick icon, which varies.
+_COMPOSER_EMPTY_JS = r"""
+() => {
+    const main = document.querySelector('#main');
+    const composer = main?.querySelector('footer div[contenteditable="true"]');
+    if (!composer) return false;
+    return (composer.innerText || '').trim() === '';
+}
+"""
 
 logger = logging.getLogger("src.chat")
 
@@ -112,7 +138,7 @@ async def _scroll_chat_list_to_top(page) -> None:
             scroller.scrollTop = 0;
         }"""
     )
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.1)
 
 
 async def list_chats(page, limit: int = 50) -> list[dict]:
@@ -176,7 +202,7 @@ async def list_chats(page, limit: int = 50) -> list[dict]:
                 return scroller.scrollTop === before;  // true if couldn't scroll further
             }"""
         )
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(0.2)
         data = await collect_once()
         if done and len(ordered) == prev_count:
             break
@@ -252,7 +278,7 @@ async def chat_list_total_count(page) -> int:
     return int(data.get("totalCount") or 0)
 
 
-async def open_chat(page, name_or_number: str, wait: float = 5.0) -> bool:
+async def open_chat(page, name_or_number: str, wait: float = 2.5) -> bool:
     """Open a chat with a contact by name or phone number.
 
     Searches for the contact via New Chat dialog, selects the first result.
@@ -265,12 +291,13 @@ async def open_chat(page, name_or_number: str, wait: float = 5.0) -> bool:
 
     # Select the first search result
     await page.keyboard.press("Enter")
-    await asyncio.sleep(1.5)
+    # Wait for the chat pane to actually open instead of a fixed sleep.
+    await _wait_for(page, _CHAT_OPEN_JS, timeout_s=wait)
     logger.info("Opened chat with %r", name_or_number)
     return True
 
 
-async def send_message(page, name_or_number: str, message: str, wait: float = 5.0) -> bool:
+async def send_message(page, name_or_number: str, message: str, wait: float = 2.5) -> bool:
     """Send a message to a contact.
 
     Opens the chat (via search), types the message, and sends it.
@@ -287,7 +314,8 @@ async def send_message(page, name_or_number: str, message: str, wait: float = 5.
 
     # Send
     await page.keyboard.press("Enter")
-    await asyncio.sleep(1.0)
+    # Wait until the composer clears (message dispatched) instead of sleeping.
+    await _wait_for(page, _COMPOSER_EMPTY_JS, timeout_s=wait)
     logger.info("Message sent to %r", name_or_number)
     return True
 

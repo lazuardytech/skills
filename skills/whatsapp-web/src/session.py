@@ -96,7 +96,7 @@ class WhatsAppSession:
         Returns the last observed state. A logged-in or qr_code state is
         considered terminal and returns immediately.
         """
-        interval = 0.5
+        interval = 0.25
         elapsed = 0.0
         state = "unknown"
         while elapsed < timeout:
