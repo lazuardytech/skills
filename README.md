@@ -33,6 +33,8 @@ npx skills add lazuardytech/skills --list
 │   │   │   ├── pin_chat.py          #     Pin / unpin a chat
 │   │   │   ├── create_group.py      #     Create a new group
 │   │   │   ├── delete_group.py      #     Kick all members + exit + delete
+│   │   │   ├── exit_group.py        #     Leave a group (keeps in chat list)
+│   │   │   ├── delete_chat.py       #     Remove a chat from the sidebar
 │   │   │   ├── read_messages.py     #     Read recent messages from a chat
 │   │   │   ├── last_reply.py        #     Last incoming reply / last message
 │   │   │   ├── list_chats.py        #     List chats in the sidebar

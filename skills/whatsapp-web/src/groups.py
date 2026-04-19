@@ -587,6 +587,56 @@ async def _exit_and_delete_group(page, wait: float) -> dict:
     return result
 
 
+async def exit_group(page, name_or_number: str, wait: float = 3.0) -> dict:
+    """Exit (leave) a group without deleting it from the chat list.
+
+    The group stays visible in the sidebar as a read-only conversation and
+    remains active for the other members. Returns {status, name, exited}.
+
+    status is "exited" on success, "noop" if the group was already left
+    (no Exit option surfaced), or raises on UI errors.
+    """
+    await open_chat(page, name_or_number, wait)
+
+    # Header menu → Exit group / Keluar dari grup.
+    opened = await page.evaluate(_OPEN_HEADER_MENU_JS)
+    if not opened:
+        raise RuntimeError("Couldn't open the chat header menu for exit.")
+    ok = await _wait_for(page, _HEADER_MENU_OPEN_JS, timeout_s=wait)
+    if not ok:
+        raise RuntimeError("The chat header menu didn't render in time.")
+
+    clicked = await page.evaluate(
+        _CLICK_MENU_ITEM_JS,
+        [r"^exit\s*group$", r"^keluar(\s*dari)?\s*grup$", r"^exit$"],
+    )
+    if not clicked:
+        # Menu has no Exit item — caller already left.
+        await page.keyboard.press("Escape")
+        logger.info("exit_group(%r): already left", name_or_number)
+        return {
+            "status": "noop",
+            "name": name_or_number,
+            "exited": False,
+            "already": True,
+        }
+
+    await asyncio.sleep(0.3)
+    await page.evaluate(
+        _CONFIRM_DIALOG_JS,
+        [r"^exit$", r"^keluar$", r"^ok$", r"^yes$", r"^exit group$"],
+    )
+    await asyncio.sleep(0.4)
+
+    logger.info("Exited group %r", name_or_number)
+    return {
+        "status": "exited",
+        "name": name_or_number,
+        "exited": True,
+        "already": False,
+    }
+
+
 async def delete_group(page, name_or_number: str, wait: float = 3.0) -> dict:
     """Kick all members, exit the group, delete it from the chat list.
 

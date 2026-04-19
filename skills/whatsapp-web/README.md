@@ -12,6 +12,8 @@ WhatsApp Web automation via Playwright + Chrome DevTools Protocol (CDP). Ships C
 - **Pin / unpin** — Pin or unpin a chat via the header menu (idempotent; detects current state from the sidebar row)
 - **Create group** — New Chat → New group → add members → set subject → Create; reports per-member success/failure
 - **Delete group** — Kick every member (admin), exit the group, delete from chat list. Destructive — script requires `--confirm`
+- **Exit group** — Leave a group; stays in the sidebar as read-only. `--confirm` required
+- **Delete chat** — Remove a chat from the sidebar (caller-side). `--confirm` required
 - **Browser lifecycle** — Launch a dedicated Chrome window with persistent profile; never hijacks the user's default Chrome; race-safe across concurrent runs via lockfile
 
 ## Setup
@@ -52,6 +54,8 @@ All scripts print JSON to stdout and diagnostics to stderr. Exit codes: `0` succ
 | `scripts/pin_chat.py` | Pin or unpin a chat: `--to <name-or-number> [--unpin]` (max 3 pinned) |
 | `scripts/create_group.py` | Create a group: `--name "..." --members "a,b,c"` (repeatable) |
 | `scripts/delete_group.py` | Destructive: kick all → exit → delete. `--name <group> --confirm` required |
+| `scripts/exit_group.py` | Leave a group (keeps it in the chat list). `--name <group> --confirm` required |
+| `scripts/delete_chat.py` | Remove a chat from the sidebar. `--to <name-or-number> --confirm` required |
 | `scripts/read_messages.py` | Read last N messages from a chat: `--from <name-or-number> [--count 10]` |
 | `scripts/last_reply.py` | Last incoming reply: `--from <name>`. Add `--any-direction` for last message regardless of sender |
 | `scripts/list_chats.py` | List sidebar chats: `[--limit 50] [--names-only]` |
@@ -151,6 +155,8 @@ skills/whatsapp-web/
 │   ├── pin_chat.py
 │   ├── create_group.py
 │   ├── delete_group.py
+│   ├── exit_group.py
+│   ├── delete_chat.py
 │   ├── read_messages.py
 │   ├── last_reply.py
 │   ├── list_chats.py
@@ -160,9 +166,9 @@ skills/whatsapp-web/
     ├── __init__.py     # WhatsAppWeb facade class
     ├── browser.py      # Chrome lifecycle + CDP connection (lockfile-protected)
     ├── session.py      # Login detection (DOM-first) & navigation
-    ├── chat.py         # Send/read messages, chat list, pinned, unread, pin/unpin
+    ├── chat.py         # Send/read messages, chat list, pinned, unread, pin/unpin, delete chat
     ├── contacts.py     # Contact search, number verification, add contact
-    ├── groups.py       # Group creation and deletion (kick-all + exit + delete)
+    ├── groups.py       # Group creation, exit, full delete (kick-all + exit + delete)
     ├── phone.py        # Phone number formatting utilities
     └── errors.py       # Custom exceptions
 ```
@@ -184,6 +190,8 @@ skills/whatsapp-web/
 | `unpin_chat(name_or_number)` | `dict` | Unpin a chat |
 | `create_group(name, members)` | `dict` | Create a group; returns `added` / `failed` member lists |
 | `delete_group(name_or_number)` | `dict` | Kick all members (as admin), exit, delete from chat list |
+| `exit_group(name_or_number)` | `dict` | Leave a group; keeps it in the sidebar as read-only |
+| `delete_chat(name_or_number)` | `dict` | Remove a chat from the sidebar (caller-side only) |
 | `add_contact(phone, first_name, last_name="", sync_to_phone=False)` | `dict` | Add a new contact via the New Chat → New contact dialog |
 | `read_last_messages(count=10)` | `list[dict]` | Structured messages: `{direction, sender, time, date, text}` |
 | `read_last_messages_text(count=10)` | `list[str]` | Backcompat: just the text |

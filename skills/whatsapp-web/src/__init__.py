@@ -15,6 +15,7 @@ from playwright.async_api import async_playwright
 
 from .browser import ChromeBrowser
 from .chat import chat_list_total_count as _chat_list_total_count
+from .chat import delete_chat as _delete_chat
 from .chat import last_incoming_message as _last_incoming_message
 from .chat import last_message as _last_message
 from .chat import list_chats as _list_chats
@@ -39,6 +40,7 @@ from .errors import (
 )
 from .groups import create_group as _create_group
 from .groups import delete_group as _delete_group
+from .groups import exit_group as _exit_group
 from .phone import format_phone_wa, format_phone_wa_variants
 from .session import WhatsAppSession
 
@@ -185,6 +187,14 @@ class WhatsAppWeb:
         """Unpin a chat in the sidebar."""
         return await _unpin_chat(self._page, name_or_number)
 
+    async def delete_chat(self, name_or_number: str) -> dict:
+        """Delete a chat from the sidebar (caller-side only).
+
+        For active groups, use exit_group() first. Returns
+        {status, name_or_number, deleted}.
+        """
+        return await _delete_chat(self._page, name_or_number)
+
     async def create_group(self, name: str, members: list[str]) -> dict:
         """Create a new WhatsApp group with the given name and members.
 
@@ -200,6 +210,13 @@ class WhatsAppWeb:
         other members). Returns {status, name, kicked, skipped, exited, deleted}.
         """
         return await _delete_group(self._page, name_or_number)
+
+    async def exit_group(self, name_or_number: str) -> dict:
+        """Exit (leave) a group. The group stays in the chat list as read-only.
+
+        Returns {status, name, exited, already}.
+        """
+        return await _exit_group(self._page, name_or_number)
 
     async def read_last_messages(self, count: int = 10) -> list[dict]:
         """Read the last visible messages from the currently open chat.

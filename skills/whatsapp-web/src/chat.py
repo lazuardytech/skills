@@ -464,6 +464,86 @@ async def unpin_chat(page, name_or_number: str, wait: float = 2.5) -> dict:
     return await _set_pin(page, name_or_number, pin=False, wait=wait)
 
 
+# JS: confirm a dialog by clicking a button matching one of the given regex
+# patterns. Returns the clicked label, or null if nothing matched.
+_CONFIRM_CHAT_DIALOG_JS = r"""
+(patterns) => {
+    const dialog = document.querySelector('div[role="dialog"]');
+    if (!dialog) return null;
+    const regs = patterns.map(p => new RegExp(p, 'i'));
+    const btns = [...dialog.querySelectorAll('[role="button"], button')];
+    for (const el of btns) {
+        const label = (el.getAttribute('aria-label') || el.innerText || '').trim();
+        for (const re of regs) {
+            if (re.test(label)) { el.click(); return label; }
+        }
+    }
+    return null;
+}
+"""
+
+
+async def delete_chat(page, name_or_number: str, wait: float = 2.5) -> dict:
+    """Delete a chat from the sidebar (conversation history + list entry).
+
+    The chat is removed from the caller's view only — the other party still
+    sees the conversation on their side. For active groups, use exit_group()
+    first (or delete_group() for the full teardown).
+
+    Returns {status, name_or_number, deleted}.
+    """
+    await open_chat(page, name_or_number, wait)
+
+    # Open header menu.
+    opened = await page.evaluate(_OPEN_HEADER_MENU_JS)
+    if not opened:
+        raise RuntimeError("Couldn't open the chat header menu.")
+    ok = await _wait_for(page, _HEADER_MENU_OPEN_JS, timeout_s=wait)
+    if not ok:
+        raise RuntimeError("The chat header menu didn't render in time.")
+
+    # Click Delete chat / Hapus chat.
+    label = await page.evaluate(
+        _CLICK_MENU_ITEM_JS,
+        [
+            r"^delete\s*chat$",
+            r"^hapus\s*chat$",
+            r"^delete$",
+            r"^hapus$",
+        ],
+    )
+    if not label:
+        # Menu doesn't expose Delete — likely this is an active group chat
+        # that must be exited first. Surface a clear error.
+        await page.keyboard.press("Escape")
+        raise RuntimeError(
+            "No 'Delete chat' option found in the header menu. "
+            "If this is an active group, exit it first."
+        )
+
+    # Confirm the modal.
+    await asyncio.sleep(0.3)
+    confirm = await page.evaluate(
+        _CONFIRM_CHAT_DIALOG_JS,
+        [r"^delete$", r"^hapus$", r"^ok$", r"^yes$", r"^delete chat$", r"^hapus chat$"],
+    )
+    if not confirm:
+        # Retry once — the dialog might still be animating in.
+        await asyncio.sleep(0.3)
+        confirm = await page.evaluate(
+            _CONFIRM_CHAT_DIALOG_JS,
+            [r"^delete$", r"^hapus$", r"^ok$", r"^yes$"],
+        )
+
+    await asyncio.sleep(0.4)
+    logger.info("Deleted chat %r", name_or_number)
+    return {
+        "status": "deleted",
+        "name_or_number": name_or_number,
+        "deleted": True,
+    }
+
+
 async def send_message(page, name_or_number: str, message: str, wait: float = 2.5) -> bool:
     """Send a message to a contact.
 
