@@ -21,9 +21,11 @@ from .chat import list_chats as _list_chats
 from .chat import list_pinned_chats as _list_pinned_chats
 from .chat import list_unread_chats as _list_unread_chats
 from .chat import open_chat as _open_chat
+from .chat import pin_chat as _pin_chat
 from .chat import read_last_messages as _read_last_messages
 from .chat import read_last_messages_text as _read_last_messages_text
 from .chat import send_message as _send_message
+from .chat import unpin_chat as _unpin_chat
 from .chat import unread_summary as _unread_summary
 from .contacts import add_contact as _add_contact
 from .contacts import check_number as _check_number
@@ -172,6 +174,14 @@ class WhatsAppWeb:
     async def send_message(self, to: str, message: str) -> bool:
         """Send a message to a contact."""
         return await _send_message(self._page, to, message)
+
+    async def pin_chat(self, name_or_number: str) -> dict:
+        """Pin a chat in the sidebar (max 3 pins on WhatsApp Web)."""
+        return await _pin_chat(self._page, name_or_number)
+
+    async def unpin_chat(self, name_or_number: str) -> dict:
+        """Unpin a chat in the sidebar."""
+        return await _unpin_chat(self._page, name_or_number)
 
     async def read_last_messages(self, count: int = 10) -> list[dict]:
         """Read the last visible messages from the currently open chat.

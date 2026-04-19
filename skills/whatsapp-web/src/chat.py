@@ -297,6 +297,173 @@ async def open_chat(page, name_or_number: str, wait: float = 2.5) -> bool:
     return True
 
 
+# JS: open the chat header menu (three-dots "Menu" button). Returns true
+# once the menu popup is attached to the DOM.
+_OPEN_HEADER_MENU_JS = r"""
+() => {
+    const main = document.querySelector('#main');
+    const header = main?.querySelector('header');
+    if (!header) return false;
+    const buttons = [...header.querySelectorAll('[role="button"], button, div[aria-label]')];
+    const want = /^(menu|lainnya|more)$/i;
+    for (const el of buttons) {
+        const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+        if (want.test(label)) { el.click(); return true; }
+    }
+    // Fallback: last button in the header is usually the menu trigger.
+    const last = buttons[buttons.length - 1];
+    if (last) { last.click(); return true; }
+    return false;
+}
+"""
+
+# JS: the header popup menu is open once a listbox/menu with multiple items
+# exists in the DOM. WA uses role="application" + div[role="button"] inside.
+_HEADER_MENU_OPEN_JS = r"""
+() => {
+    const lists = document.querySelectorAll(
+        'div[role="application"] [role="menu"], ul[role="menu"], '
+        + 'div[aria-label*="menu" i], div[role="listbox"]'
+    );
+    for (const l of lists) {
+        const items = l.querySelectorAll('[role="menuitem"], li, div[role="button"]');
+        if (items.length >= 2) return true;
+    }
+    return false;
+}
+"""
+
+# JS: click an item in an open popup menu by matching its label. Accepts a
+# list of regex strings (JS flavored) to try in order. Returns true on click.
+_CLICK_MENU_ITEM_JS = r"""
+(patterns) => {
+    const regs = patterns.map(p => new RegExp(p, 'i'));
+    const candidates = [...document.querySelectorAll(
+        '[role="menuitem"], [role="menu"] li, [role="menu"] div[role="button"], '
+        + 'div[role="application"] div[role="button"], ul[role="menu"] li'
+    )];
+    for (const el of candidates) {
+        const label = (el.getAttribute('aria-label') || el.innerText || '').trim();
+        for (const re of regs) {
+            if (re.test(label)) { el.click(); return label; }
+        }
+    }
+    return null;
+}
+"""
+
+
+async def _close_any_popup(page) -> None:
+    """Best-effort close for stray menus/dialogs via Escape."""
+    try:
+        await page.keyboard.press("Escape")
+        await asyncio.sleep(0.1)
+    except Exception:
+        pass
+
+
+async def _is_pinned_in_sidebar(page, name: str) -> bool | None:
+    """Return True/False if a sidebar row for `name` exists, else None.
+
+    Uses the same row-reader the list_chats() function uses, so a chat that
+    isn't in the top-of-list view may return None — the caller should treat
+    None as "unknown" rather than "not pinned".
+    """
+    data = await page.evaluate(_READ_VISIBLE_ROWS_JS)
+    if "error" in data:
+        return None
+    for row in data.get("rows", []):
+        if _row_display_name(row).strip().lower() == name.strip().lower():
+            return _row_is_pinned(row)
+    return None
+
+
+async def _set_pin(page, name_or_number: str, pin: bool, wait: float = 2.5) -> dict:
+    """Shared implementation for pin_chat / unpin_chat.
+
+    Returns {status, action, name_or_number, already}.
+    """
+    await open_chat(page, name_or_number, wait)
+
+    # Check current pin state from the sidebar row. WA shows the same chat
+    # we just opened highlighted at the top, so the row should be visible.
+    # Scroll the sidebar to top first for a reliable read.
+    await _scroll_chat_list_to_top(page)
+    current = await _is_pinned_in_sidebar(page, name_or_number)
+    if current is pin:
+        logger.info(
+            "%s is already %s",
+            name_or_number,
+            "pinned" if pin else "unpinned",
+        )
+        return {
+            "status": "noop",
+            "action": "pin" if pin else "unpin",
+            "name_or_number": name_or_number,
+            "already": True,
+        }
+
+    # Open header menu.
+    opened = await page.evaluate(_OPEN_HEADER_MENU_JS)
+    if not opened:
+        raise RuntimeError("Couldn't open the chat header menu.")
+    ok = await _wait_for(page, _HEADER_MENU_OPEN_JS, timeout_s=wait)
+    if not ok:
+        raise RuntimeError("The chat header menu didn't render in time.")
+
+    # Click the pin/unpin item. Patterns cover English + Indonesian labels.
+    patterns = (
+        [r"^pin\s*chat$", r"^pin$", r"^sematkan( chat)?$"]
+        if pin
+        else [r"^unpin\s*chat$", r"^unpin$", r"^lepas\s*sematan$", r"^batal\s*sematan$"]
+    )
+    label = await page.evaluate(_CLICK_MENU_ITEM_JS, patterns)
+    if not label:
+        await _close_any_popup(page)
+        raise RuntimeError(f"Couldn't find a {'Pin' if pin else 'Unpin'} option in the chat menu.")
+
+    # Pin cap (3 max) surfaces as a confirm dialog — dismiss anything in the
+    # way and re-check sidebar state.
+    await asyncio.sleep(0.3)
+    # If a confirm dialog appeared, try to press its primary action.
+    await page.evaluate(
+        """() => {
+            const d = document.querySelector('div[role="dialog"]');
+            if (!d) return false;
+            const btns = [...d.querySelectorAll('[role="button"], button')];
+            const prefer = /^(ok|confirm|pin|unpin|sematkan|lepas)/i;
+            for (const b of btns) {
+                const t = (b.getAttribute('aria-label') || b.innerText || '').trim();
+                if (prefer.test(t)) { b.click(); return true; }
+            }
+            return false;
+        }"""
+    )
+
+    # Verify new state by re-reading the sidebar row.
+    await asyncio.sleep(0.2)
+    await _scroll_chat_list_to_top(page)
+    new_state = await _is_pinned_in_sidebar(page, name_or_number)
+    final = bool(new_state) if new_state is not None else pin
+    logger.info("%s chat %r", "Pinned" if final else "Unpinned", name_or_number)
+    return {
+        "status": "pinned" if final else "unpinned",
+        "action": "pin" if pin else "unpin",
+        "name_or_number": name_or_number,
+        "already": False,
+    }
+
+
+async def pin_chat(page, name_or_number: str, wait: float = 2.5) -> dict:
+    """Pin a chat in the sidebar. WA Web allows at most 3 pinned chats."""
+    return await _set_pin(page, name_or_number, pin=True, wait=wait)
+
+
+async def unpin_chat(page, name_or_number: str, wait: float = 2.5) -> dict:
+    """Unpin a chat in the sidebar."""
+    return await _set_pin(page, name_or_number, pin=False, wait=wait)
+
+
 async def send_message(page, name_or_number: str, message: str, wait: float = 2.5) -> bool:
     """Send a message to a contact.
 

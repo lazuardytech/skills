@@ -9,6 +9,7 @@ WhatsApp Web automation via Playwright + Chrome DevTools Protocol (CDP). Ships C
 - **Messaging** — Send messages, read recent messages (structured: direction/sender/time/date/text)
 - **Last reply** — Get the last reply from a specific contact ("X bales apa") or the last message in a chat
 - **Chat list** — List chats, list pinned chats (max 3), list unread chats with per-chat unread counts
+- **Pin / unpin** — Pin or unpin a chat via the header menu (idempotent; detects current state from the sidebar row)
 - **Browser lifecycle** — Launch a dedicated Chrome window with persistent profile; never hijacks the user's default Chrome; race-safe across concurrent runs via lockfile
 
 ## Setup
@@ -46,6 +47,7 @@ All scripts print JSON to stdout and diagnostics to stderr. Exit codes: `0` succ
 | `scripts/check_number.py` | Verify one (`--phone`) or many (`--phones a,b,c`) numbers against WhatsApp |
 | `scripts/add_contact.py` | Add a new contact: `--phone --first-name [--last-name] [--sync]` |
 | `scripts/send_message.py` | Send a message: `--to <name-or-number> --message "..."` |
+| `scripts/pin_chat.py` | Pin or unpin a chat: `--to <name-or-number> [--unpin]` (max 3 pinned) |
 | `scripts/read_messages.py` | Read last N messages from a chat: `--from <name-or-number> [--count 10]` |
 | `scripts/last_reply.py` | Last incoming reply: `--from <name>`. Add `--any-direction` for last message regardless of sender |
 | `scripts/list_chats.py` | List sidebar chats: `[--limit 50] [--names-only]` |
@@ -142,6 +144,7 @@ skills/whatsapp-web/
 │   ├── check_number.py
 │   ├── add_contact.py
 │   ├── send_message.py
+│   ├── pin_chat.py
 │   ├── read_messages.py
 │   ├── last_reply.py
 │   ├── list_chats.py
@@ -170,6 +173,8 @@ skills/whatsapp-web/
 | `check_numbers(phones)` | `dict[str, bool]` | Batch verification |
 | `open_chat(name_or_number)` | `bool` | Open a chat via search |
 | `send_message(to, message)` | `bool` | Send a message (multiline supported) |
+| `pin_chat(name_or_number)` | `dict` | Pin a chat (max 3 on WhatsApp Web) |
+| `unpin_chat(name_or_number)` | `dict` | Unpin a chat |
 | `add_contact(phone, first_name, last_name="", sync_to_phone=False)` | `dict` | Add a new contact via the New Chat → New contact dialog |
 | `read_last_messages(count=10)` | `list[dict]` | Structured messages: `{direction, sender, time, date, text}` |
 | `read_last_messages_text(count=10)` | `list[str]` | Backcompat: just the text |

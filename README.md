@@ -30,6 +30,7 @@ npx skills add lazuardytech/skills --list
 │   │   │   ├── check_number.py      #     Verify number(s) on WhatsApp
 │   │   │   ├── add_contact.py       #     Add a new contact
 │   │   │   ├── send_message.py      #     Send a message
+│   │   │   ├── pin_chat.py          #     Pin / unpin a chat
 │   │   │   ├── read_messages.py     #     Read recent messages from a chat
 │   │   │   ├── last_reply.py        #     Last incoming reply / last message
 │   │   │   ├── list_chats.py        #     List chats in the sidebar
