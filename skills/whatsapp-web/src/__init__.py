@@ -38,6 +38,7 @@ from .errors import (
     WhatsAppWebError,
 )
 from .groups import create_group as _create_group
+from .groups import delete_group as _delete_group
 from .phone import format_phone_wa, format_phone_wa_variants
 from .session import WhatsAppSession
 
@@ -191,6 +192,14 @@ class WhatsAppWeb:
         {status, name, requested_members, added, failed}.
         """
         return await _create_group(self._page, name=name, members=members)
+
+    async def delete_group(self, name_or_number: str) -> dict:
+        """Fully tear down a group: kick all members, exit, delete from list.
+
+        Works best when the caller is a group admin (only admins can remove
+        other members). Returns {status, name, kicked, skipped, exited, deleted}.
+        """
+        return await _delete_group(self._page, name_or_number)
 
     async def read_last_messages(self, count: int = 10) -> list[dict]:
         """Read the last visible messages from the currently open chat.

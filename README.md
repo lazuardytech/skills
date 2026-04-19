@@ -32,6 +32,7 @@ npx skills add lazuardytech/skills --list
 │   │   │   ├── send_message.py      #     Send a message
 │   │   │   ├── pin_chat.py          #     Pin / unpin a chat
 │   │   │   ├── create_group.py      #     Create a new group
+│   │   │   ├── delete_group.py      #     Kick all members + exit + delete
 │   │   │   ├── read_messages.py     #     Read recent messages from a chat
 │   │   │   ├── last_reply.py        #     Last incoming reply / last message
 │   │   │   ├── list_chats.py        #     List chats in the sidebar
@@ -43,7 +44,7 @@ npx skills add lazuardytech/skills --list
 │   │       ├── session.py           #     Login detection & navigation
 │   │       ├── chat.py              #     Send/read messages, chat list, pin/unpin
 │   │       ├── contacts.py          #     Contact search, number verification, add contact
-│   │       ├── groups.py            #     Group creation
+│   │       ├── groups.py            #     Group creation + deletion
 │   │       ├── phone.py             #     Phone number formatting utilities
 │   │       └── errors.py            #     Custom exceptions
 │   └── ...                          # More skills to come
