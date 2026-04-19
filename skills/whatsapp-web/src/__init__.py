@@ -37,6 +37,7 @@ from .errors import (
     NavigationError,
     WhatsAppWebError,
 )
+from .groups import create_group as _create_group
 from .phone import format_phone_wa, format_phone_wa_variants
 from .session import WhatsAppSession
 
@@ -182,6 +183,14 @@ class WhatsAppWeb:
     async def unpin_chat(self, name_or_number: str) -> dict:
         """Unpin a chat in the sidebar."""
         return await _unpin_chat(self._page, name_or_number)
+
+    async def create_group(self, name: str, members: list[str]) -> dict:
+        """Create a new WhatsApp group with the given name and members.
+
+        Members can be contact names or phone numbers. Returns
+        {status, name, requested_members, added, failed}.
+        """
+        return await _create_group(self._page, name=name, members=members)
 
     async def read_last_messages(self, count: int = 10) -> list[dict]:
         """Read the last visible messages from the currently open chat.

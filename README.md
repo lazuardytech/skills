@@ -31,6 +31,7 @@ npx skills add lazuardytech/skills --list
 │   │   │   ├── add_contact.py       #     Add a new contact
 │   │   │   ├── send_message.py      #     Send a message
 │   │   │   ├── pin_chat.py          #     Pin / unpin a chat
+│   │   │   ├── create_group.py      #     Create a new group
 │   │   │   ├── read_messages.py     #     Read recent messages from a chat
 │   │   │   ├── last_reply.py        #     Last incoming reply / last message
 │   │   │   ├── list_chats.py        #     List chats in the sidebar
@@ -40,8 +41,9 @@ npx skills add lazuardytech/skills --list
 │   │       ├── __init__.py          #     WhatsAppWeb facade class
 │   │       ├── browser.py           #     Chrome lifecycle + CDP connection
 │   │       ├── session.py           #     Login detection & navigation
-│   │       ├── chat.py              #     Send/read messages, chat list
-│   │       ├── contacts.py          #     Contact search & number verification
+│   │       ├── chat.py              #     Send/read messages, chat list, pin/unpin
+│   │       ├── contacts.py          #     Contact search, number verification, add contact
+│   │       ├── groups.py            #     Group creation
 │   │       ├── phone.py             #     Phone number formatting utilities
 │   │       └── errors.py            #     Custom exceptions
 │   └── ...                          # More skills to come
