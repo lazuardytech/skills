@@ -44,6 +44,7 @@ All scripts print JSON to stdout and diagnostics to stderr. Exit codes: `0` succ
 |--------|---------|
 | `scripts/login.py` | Open WA Web, check login state. Non-blocking by default; `--wait` opts into blocking until login |
 | `scripts/check_number.py` | Verify one (`--phone`) or many (`--phones a,b,c`) numbers against WhatsApp |
+| `scripts/add_contact.py` | Add a new contact: `--phone --first-name [--last-name] [--sync]` |
 | `scripts/send_message.py` | Send a message: `--to <name-or-number> --message "..."` |
 | `scripts/read_messages.py` | Read last N messages from a chat: `--from <name-or-number> [--count 10]` |
 | `scripts/last_reply.py` | Last incoming reply: `--from <name>`. Add `--any-direction` for last message regardless of sender |
@@ -139,6 +140,7 @@ skills/whatsapp-web/
 ├── scripts/            # CLI entry points
 │   ├── login.py
 │   ├── check_number.py
+│   ├── add_contact.py
 │   ├── send_message.py
 │   ├── read_messages.py
 │   ├── last_reply.py
@@ -168,6 +170,7 @@ skills/whatsapp-web/
 | `check_numbers(phones)` | `dict[str, bool]` | Batch verification |
 | `open_chat(name_or_number)` | `bool` | Open a chat via search |
 | `send_message(to, message)` | `bool` | Send a message (multiline supported) |
+| `add_contact(phone, first_name, last_name="", sync_to_phone=False)` | `dict` | Add a new contact via the New Chat → New contact dialog |
 | `read_last_messages(count=10)` | `list[dict]` | Structured messages: `{direction, sender, time, date, text}` |
 | `read_last_messages_text(count=10)` | `list[str]` | Backcompat: just the text |
 | `last_message(name_or_number)` | `dict \| None` | Open chat → last message, any direction |

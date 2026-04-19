@@ -25,6 +25,7 @@ from .chat import read_last_messages as _read_last_messages
 from .chat import read_last_messages_text as _read_last_messages_text
 from .chat import send_message as _send_message
 from .chat import unread_summary as _unread_summary
+from .contacts import add_contact as _add_contact
 from .contacts import check_number as _check_number
 from .errors import (
     BrowserLaunchError,
@@ -142,6 +143,25 @@ class WhatsAppWeb:
                 await asyncio.sleep(self._between_delay)
             results[phone] = await self.check_number(phone)
         return results
+
+    async def add_contact(
+        self,
+        phone: str,
+        first_name: str,
+        last_name: str = "",
+        sync_to_phone: bool = False,
+    ) -> dict:
+        """Add a new contact via the New Chat → New contact dialog.
+
+        Returns {status, first_name, last_name, phone, sync_to_phone}.
+        """
+        return await _add_contact(
+            self._page,
+            phone=phone,
+            first_name=first_name,
+            last_name=last_name,
+            sync_to_phone=sync_to_phone,
+        )
 
     # --- Chat operations ---
 

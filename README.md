@@ -28,6 +28,7 @@ npx skills add lazuardytech/skills --list
 │   │   ├── scripts/                 #   CLI entry points (agent-callable)
 │   │   │   ├── login.py             #     Open WA Web / check login state
 │   │   │   ├── check_number.py      #     Verify number(s) on WhatsApp
+│   │   │   ├── add_contact.py       #     Add a new contact
 │   │   │   ├── send_message.py      #     Send a message
 │   │   │   ├── read_messages.py     #     Read recent messages from a chat
 │   │   │   ├── last_reply.py        #     Last incoming reply / last message

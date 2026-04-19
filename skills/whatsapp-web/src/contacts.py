@@ -99,3 +99,224 @@ async def find_contact(page, name_or_number: str, wait: float = DEFAULT_SEARCH_W
         return False
 
     return True
+
+
+# JS: locate the "New contact" button in the New Chat dialog, click it.
+# Matches English + Indonesian labels; falls back to aria-label scan.
+_CLICK_NEW_CONTACT_JS = r"""
+() => {
+    const dialog = document.querySelector('div[role="dialog"], #app > div > div > div');
+    const scope = dialog || document;
+    const targets = [...scope.querySelectorAll(
+        '[role="button"], button, [aria-label], [role="listitem"]'
+    )];
+    const want = /^(new contact|kontak baru|tambah kontak)$/i;
+    for (const el of targets) {
+        const label = (el.getAttribute('aria-label') || el.innerText || '').trim();
+        if (want.test(label)) { el.click(); return true; }
+        // Some WA builds nest the label text in a child span.
+        const text = (el.innerText || '').trim().split('\n')[0];
+        if (want.test(text)) { el.click(); return true; }
+    }
+    return false;
+}
+"""
+
+# JS: true once the New Contact form is visible (has inputs for name + phone).
+_NEW_CONTACT_FORM_READY_JS = r"""
+() => {
+    const inputs = document.querySelectorAll(
+        'div[role="dialog"] input, div[contenteditable="true"][role="textbox"]'
+    );
+    // Form has at least 3 editable fields (first name, last name, phone).
+    return inputs.length >= 3;
+}
+"""
+
+# JS: return labeled fields inside the New Contact form so we can target
+# them by role rather than positional tabs (more resilient).
+_FIND_CONTACT_FIELDS_JS = r"""
+() => {
+    const out = {};
+    const fields = document.querySelectorAll(
+        'div[role="dialog"] input, div[role="dialog"] div[contenteditable="true"]'
+    );
+    const keymap = [
+        ['first', /first\s*name|nama\s*depan/i],
+        ['last',  /last\s*name|nama\s*belakang/i],
+        ['phone', /phone|nomor|number/i],
+    ];
+    for (const el of fields) {
+        const label = (el.getAttribute('aria-label') || el.getAttribute('placeholder')
+            || el.getAttribute('title') || '').trim();
+        for (const [key, re] of keymap) {
+            if (!out[key] && re.test(label)) { out[key] = label; break; }
+        }
+    }
+    return out;
+}
+"""
+
+# JS: set the "Sync contact to phone" checkbox/toggle to a desired state.
+# Returns {found: bool, changed: bool, final: bool}.
+_SET_SYNC_TOGGLE_JS = r"""
+(desired) => {
+    const dialog = document.querySelector('div[role="dialog"]');
+    if (!dialog) return {found: false, changed: false, final: false};
+    const candidates = [...dialog.querySelectorAll(
+        '[role="checkbox"], [role="switch"], input[type="checkbox"]'
+    )];
+    let target = null;
+    for (const el of candidates) {
+        const label = (el.getAttribute('aria-label') || '').toLowerCase();
+        const parentText = (el.closest('label')?.innerText
+            || el.parentElement?.innerText || '').toLowerCase();
+        if (/sync.*phone|simpan.*telepon|sinkron.*telepon/.test(label + ' ' + parentText)) {
+            target = el;
+            break;
+        }
+    }
+    if (!target && candidates.length === 1) target = candidates[0];
+    if (!target) return {found: false, changed: false, final: false};
+    const checked = target.getAttribute('aria-checked') === 'true'
+        || target.checked === true;
+    let changed = false;
+    if (checked !== desired) {
+        target.click();
+        changed = true;
+    }
+    const finalChecked = target.getAttribute('aria-checked') === 'true'
+        || target.checked === true;
+    return {found: true, changed, final: finalChecked};
+}
+"""
+
+# JS: click the Save button in the New Contact dialog.
+_CLICK_SAVE_JS = r"""
+() => {
+    const dialog = document.querySelector('div[role="dialog"]');
+    if (!dialog) return false;
+    const btns = [...dialog.querySelectorAll('[role="button"], button')];
+    const want = /^(save|simpan)$/i;
+    for (const el of btns) {
+        const label = (el.getAttribute('aria-label') || el.innerText || '').trim();
+        if (want.test(label) && !el.hasAttribute('disabled')
+            && el.getAttribute('aria-disabled') !== 'true') {
+            el.click();
+            return true;
+        }
+    }
+    return false;
+}
+"""
+
+
+async def _fill_field(page, placeholder_match: str, value: str) -> bool:
+    """Focus a dialog input whose aria-label/placeholder matches, then type value.
+
+    Returns True if a field was matched and filled.
+    """
+    # Prefer locator because inputs can be <input> or contenteditable divs.
+    selectors = [
+        f'div[role="dialog"] input[aria-label*="{placeholder_match}" i]',
+        f'div[role="dialog"] input[placeholder*="{placeholder_match}" i]',
+        f'div[role="dialog"] div[contenteditable="true"][aria-label*="{placeholder_match}" i]',
+    ]
+    for sel in selectors:
+        try:
+            loc = page.locator(sel).first
+            if await loc.count() == 0:
+                continue
+            await loc.click()
+            # Clear any pre-filled content (rare but possible).
+            await page.keyboard.press("Meta+A")
+            await page.keyboard.press("Delete")
+            await page.keyboard.type(value)
+            return True
+        except Exception:
+            continue
+    return False
+
+
+async def add_contact(
+    page,
+    phone: str,
+    first_name: str,
+    last_name: str = "",
+    sync_to_phone: bool = False,
+    wait: float = DEFAULT_SEARCH_WAIT,
+) -> dict:
+    """Add a new contact via WhatsApp Web's New Chat → New contact flow.
+
+    Returns a dict: {status, first_name, last_name, phone, sync_to_phone}.
+    status is "saved" on success; raises on UI errors.
+    """
+    # 1. Open New Chat dialog.
+    await page.keyboard.press("Meta+Control+n")
+    await asyncio.sleep(0.3)
+
+    # 2. Click "New contact" entry.
+    clicked = await page.evaluate(_CLICK_NEW_CONTACT_JS)
+    if not clicked:
+        # Some WA builds need a second tick for the dialog to paint options.
+        await asyncio.sleep(0.4)
+        clicked = await page.evaluate(_CLICK_NEW_CONTACT_JS)
+    if not clicked:
+        await close_search(page)
+        raise RuntimeError(
+            "Couldn't find the 'New contact' option in WhatsApp Web. "
+            "The dialog layout may have changed."
+        )
+
+    # 3. Wait for the form to be ready.
+    ok = await _wait_for(page, _NEW_CONTACT_FORM_READY_JS, timeout_s=wait)
+    if not ok:
+        await close_search(page)
+        raise RuntimeError("The New Contact form didn't render in time.")
+
+    # 4. Fill fields. Order: first name, last name, phone.
+    filled_first = await _fill_field(page, "first name", first_name)
+    if not filled_first:
+        # Fall back to focusing the first input in the dialog via Tab.
+        await page.keyboard.press("Tab")
+        await page.keyboard.type(first_name)
+
+    if last_name:
+        filled_last = await _fill_field(page, "last name", last_name)
+        if not filled_last:
+            await page.keyboard.press("Tab")
+            await page.keyboard.type(last_name)
+
+    filled_phone = await _fill_field(page, "phone", phone)
+    if not filled_phone:
+        # Try Indonesian label fallback, then Tab approach.
+        if not await _fill_field(page, "nomor", phone):
+            await page.keyboard.press("Tab")
+            await page.keyboard.type(phone)
+
+    # 5. Sync-to-phone toggle.
+    sync_result = await page.evaluate(_SET_SYNC_TOGGLE_JS, sync_to_phone)
+
+    # 6. Click Save.
+    saved = await page.evaluate(_CLICK_SAVE_JS)
+    if not saved:
+        raise RuntimeError(
+            "Couldn't click Save on the New Contact form. "
+            "The button may be disabled (invalid phone number?)."
+        )
+
+    # Wait for dialog to dismiss.
+    await _wait_for(
+        page,
+        "() => !document.querySelector('div[role=\"dialog\"]')",
+        timeout_s=wait,
+    )
+
+    logger.info("Added contact %r (%s)", f"{first_name} {last_name}".strip(), phone)
+    return {
+        "status": "saved",
+        "first_name": first_name,
+        "last_name": last_name,
+        "phone": phone,
+        "sync_to_phone": bool(sync_result.get("final")) if sync_result else sync_to_phone,
+    }
