@@ -1,6 +1,6 @@
-# Lazuardy Tech Skills
+# 📦 skills
 
-A collection of AI agent skills for [Lazuardy Tech](https://lazuardy.tech).
+A collection of AI agent skills by [Lazuardy Tech](https://lazuardy.tech).
 
 ## Install
 
