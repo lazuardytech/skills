@@ -43,7 +43,9 @@ python3 scripts/login.py --wait --timeout 120
 
 ## CLI Scripts (agent-callable)
 
-All scripts print JSON to stdout and diagnostics to stderr. Exit codes: `0` success, `1` login required, `2` contact not found.
+All scripts print JSON to stdout and diagnostics to stderr. Exit codes: `0` success, `1` login required / login error / `--wait` timeout, `2` contact not found, `3` destructive script missing `--confirm`.
+
+`login.py` never crashes with a traceback — Chrome-launch, CDP-connect, and navigation failures surface as `{"state": "error", "error": "..."}` with exit code 1. Destructive scripts (`delete_group.py`, `exit_group.py`, `delete_chat.py`) refuse to run without `--confirm` (exit code 3).
 
 | Script | Purpose |
 |--------|---------|

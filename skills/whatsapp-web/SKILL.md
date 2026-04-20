@@ -265,12 +265,17 @@ Default mode exits right after opening the window — agents MUST NOT use `--wai
 Output examples:
 - `{"state": "logged_in"}`
 - `{"state": "qr_code", "action": "Scan the QR code with your phone", "message": "..."}`
+- `{"state": "loading", "message": "..."}`
 - `{"state": "timeout", "error": "..."}` (only with `--wait`)
+- `{"state": "error", "error": "..."}` — Chrome / CDP / navigation failed
+
+`login.py` never crashes with a traceback: Chrome-launch, CDP-connect, and navigation failures are reported as `{"state": "error", ...}` with exit code 1, same as a `--wait` timeout.
 
 ## Script conventions
 
 - All scripts output JSON to stdout, diagnostics to stderr
-- Exit code 0 = success, 1 = login required, 2 = contact not found
+- Exit codes: `0` = success, `1` = login required / login error / wait timeout, `2` = contact not found, `3` = destructive script missing `--confirm`
+- Destructive scripts (`delete_group.py`, `exit_group.py`, `delete_chat.py`) refuse to run without `--confirm` (exit code 3). Agent MUST ask the user to confirm first before invoking them
 - Run `python3 scripts/<name>.py --help` for usage
 - Scripts use PEP 723 inline dependencies — run with `uv run` or install Playwright manually
 
