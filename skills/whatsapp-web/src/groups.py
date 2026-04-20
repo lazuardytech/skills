@@ -667,7 +667,6 @@ async def delete_group(page, name_or_number: str, wait: float = 3.0) -> dict:
         len(kicked),
         len(skipped),
     )
-    _ = close_search  # (imported for parity with other modules; unused here)
     return {
         "status": status,
         "name": name_or_number,
