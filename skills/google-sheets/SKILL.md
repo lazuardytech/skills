@@ -23,6 +23,27 @@ If a script returns `403 PERMISSION_DENIED`, tell the user:
 If a script returns `SpreadsheetNotFound`, tell the user:
 > "Spreadsheet not found or not shared. Make sure the URL is correct and the sheet is shared with the service account."
 
+## Credentials Safety
+
+`credentials.json` contains a private key — treat it like a password.
+
+When the user places `credentials.json` in a project directory, ALWAYS:
+1. Check if `.gitignore` exists in that directory
+2. Check if `credentials.json` is already listed — if not, add it immediately:
+   ```
+   # Google service account key
+   credentials.json
+   ```
+3. Tell the user: "I've added `credentials.json` to `.gitignore` so it won't be committed."
+
+If there is no `.gitignore`, create one with `credentials.json` in it.
+
+If the user wants to store it outside the project, suggest:
+- `~/.config/google/credentials.json` and pass `--credentials ~/.config/google/credentials.json`
+- Or an environment variable path: `--credentials $GOOGLE_CREDENTIALS`
+
+Never echo or print the contents of `credentials.json`. Reference it by path only.
+
 # google-sheets
 
 Google Sheets read/write automation via the Sheets API and `gspread`.

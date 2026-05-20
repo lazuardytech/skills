@@ -32,6 +32,11 @@
 4. Place it in your working directory (or pass `--credentials <path>` to any script)
 
 > **Never commit `credentials.json` to version control.**
+> Add it to `.gitignore` immediately after downloading:
+> ```
+> echo 'credentials.json' >> .gitignore
+> ```
+> Alternatively, store it outside the project (e.g. `~/.config/google/credentials.json`) and pass `--credentials <path>` to each script.
 
 ### 4. Share the Spreadsheet
 
