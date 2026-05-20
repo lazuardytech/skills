@@ -8,6 +8,18 @@ metadata:
   version: "1.0"
 ---
 
+## Setup Check
+
+Before running any script, verify the skill is ready by running `scripts/login.py` (non-blocking). Check the `state` field:
+
+- `logged_in` — ready, proceed with the task
+- `qr_code` — not logged in, tell the user:
+  > "WhatsApp Web isn't logged in yet. Open a terminal, run `python3 scripts/login.py`, scan the QR code from your phone, then try again."
+- `error` — Chrome not found or CDP failed, tell the user:
+  > "Couldn't connect to Chrome. Make sure Google Chrome is installed and Playwright is set up. See `skills/whatsapp-web/SETUP.md` for instructions."
+
+For first-time setup, direct the user to `skills/whatsapp-web/SETUP.md`.
+
 # whatsapp-web
 
 WhatsApp Web automation via Playwright + Chrome CDP. Scripts output JSON to stdout.

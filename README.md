@@ -17,6 +17,7 @@ npx skills add lazuardytech/skills --list
 | Skill | Description |
 |-------|-------------|
 | [whatsapp-web](./skills/whatsapp-web/) | WhatsApp Web automation — login, send/read messages, list chats, count unread, number verification |
+| [google-sheets](./skills/google-sheets/) | Google Sheets read/write — read rows, update cells, batch update, append rows, list worksheets |
 
 ## Structure
 
@@ -49,6 +50,18 @@ npx skills add lazuardytech/skills --list
 │   │       ├── groups.py            #     Group creation + deletion
 │   │       ├── phone.py             #     Phone number formatting utilities
 │   │       └── errors.py            #     Custom exceptions
+│   ├── google-sheets/               # Google Sheets automation skill
+│   │   ├── SKILL.md                 #   Skill metadata, triggers, agent instructions
+│   │   ├── README.md                #   Human-facing docs
+│   │   ├── scripts/                 #   CLI entry points (agent-callable)
+│   │   │   ├── read_rows.py         #     Read all rows as list of dicts
+│   │   │   ├── list_worksheets.py   #     List all worksheets
+│   │   │   ├── update_cell.py       #     Update a single cell
+│   │   │   ├── update_range.py      #     Update a named range
+│   │   │   ├── batch_update.py      #     Batch-update multiple cells
+│   │   │   └── append_row.py        #     Append a row
+│   │   └── src/                     #   Python package used by the scripts
+│   │       └── __init__.py          #     gspread client + helpers
 │   └── ...                          # More skills to come
 ├── ruff.toml                        # Python formatter/linter config
 └── README.md
