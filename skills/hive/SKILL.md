@@ -13,17 +13,19 @@ description: >
 <EXTREMELY-IMPORTANT>
 ## Harness Compatibility Check
 
-Hive Mind ONLY supports Command Code CLI as the harness. Before doing
-anything else, verify the harness:
+Hive Mind supports Command Code CLI, OpenCode, and Mastra Code.
+Before doing anything else, detect the harness:
 
-1. Check if `command-code` or `commandcode` is in the environment
-2. If NOT Command Code, show warning and STOP:
+1. Check for `command-code` or `commandcode` → Command Code CLI
+2. Check for `opencode` in environment or `.opencode/` dir → OpenCode
+3. Check for `mastracode` in environment or `.mastracode/` dir → Mastra Code
+4. If none detected, show warning and STOP:
 
-"⚠️ Warning: Hive Mind is only supported on Command Code CLI.
+"⚠️ Warning: Hive Mind supports Command Code CLI, OpenCode, and Mastra Code.
 Current harness: [detected harness]
 Some features may not work correctly. Use at your own risk."
 
-3. If Command Code, continue normally.
+5. If supported, continue normally with harness-specific behavior.
 </EXTREMELY-IMPORTANT>
 
 You are the **Main Agent**: a Senior Lead Software Engineer responsible for
@@ -83,11 +85,11 @@ context carries the mode.
 ## Setup
 
 <EXTREMELY-IMPORTANT>
-Supported Harness: Command Code CLI ONLY.
+Supported Harnesses: Command Code CLI, OpenCode, Mastra Code.
 
 If running on a different harness, show warning:
-"⚠️ Hive Mind is designed for Command Code CLI. Setup may not work
-correctly on other harnesses. Supported: Command Code CLI."
+"⚠️ Hive Mind is designed for Command Code CLI, OpenCode, and Mastra Code.
+Setup may not work correctly on other harnesses."
 </EXTREMELY-IMPORTANT>
 
 When the user invokes `/hive setup`, verify all required subagents, create
@@ -105,23 +107,31 @@ agent prompt files if missing, and report status.
 | `documenter` | Documentation updates | `documenter` |
 | `operator` | Git, PR, branch, deployment | `operator` |
 
+### Harness-Specific Config Locations
+
+| Harness | Agent Prompt Location | Format |
+|---------|----------------------|--------|
+| Command Code CLI | `~/.commandcode/hive/` | Plain markdown |
+| OpenCode | `~/.config/opencode/agents/` | Markdown with frontmatter |
+| Mastra Code | `~/.mastracode/skills/hive/agents/` | Plain markdown |
+
 ### Setup Flow
 
-1. **Check built-in agents** — verify all 7 are available.
-2. **Ensure `~/.commandcode/hive/` directory exists** — create it if missing.
-3. **Check each prompt file** — scan for existing files. DO NOT overwrite
+1. **Detect harness** — determine which harness is running
+2. **Check built-in agents** — verify all 7 are available
+3. **Ensure config directory exists** — create if missing (harness-specific)
+4. **Check each prompt file** — scan for existing files. DO NOT overwrite
    files that already exist.
-4. **Create missing files** — only create files that don't exist yet.
-5. **Report results** — show table with agent status and config status
-   (EXISTS / CREATED).
-6. **If all OK** — confirm: "Hive Mind is ready."
+5. **Create missing files** — only create files that don't exist yet
+6. **Report results** — show table with agent status and config status
+7. **If all OK** — confirm: "Hive Mind is ready."
 
 ### Overwrite Protection
 
 **NEVER overwrite existing agent prompt files.** The user may have customized
 them. Setup must:
 
-1. Create `~/.commandcode/hive/` directory if it doesn't exist
+1. Create config directory if it doesn't exist
 2. Check each prompt file individually
 3. Only create files that are missing
 4. Report which files already exist (EXISTS) and which were created (CREATED)
@@ -129,12 +139,53 @@ them. Setup must:
 
 ### Agent Prompt Files
 
+#### Command Code CLI
+
 Location: `~/.commandcode/hive/`
 
-Each file defines the system prompt for that agent role with Ponytail Ultra
-built-in. Edit them to customize behavior globally across all projects.
+| File | Agent | Purpose |
+|------|-------|---------|
+| `discovery.md` | explore | How to explore and understand codebase |
+| `planning.md` | plan | How to design implementation approaches |
+| `implementation.md` | executor | How to make code changes |
+| `review.md` | auditor | How to review code for issues |
+| `verification.md` | verifier | How to test and validate changes |
+| `documentation.md` | documenter | How to update documentation |
+| `operations.md` | operator | How to handle git and deployment |
 
-Files created by setup:
+#### OpenCode
+
+Location: `~/.config/opencode/agents/`
+
+Files use markdown with YAML frontmatter:
+
+```markdown
+---
+description: [agent description]
+mode: subagent
+permission:
+  edit: allow
+  bash: allow
+  read: allow
+  glob: allow
+  grep: allow
+---
+[agent system prompt]
+```
+
+| File | Agent | Purpose |
+|------|-------|---------|
+| `hive-explore.md` | explore | Codebase exploration & discovery |
+| `hive-plan.md` | plan | Architecture & implementation planning |
+| `hive-executor.md` | executor | Code changes, shell commands, file ops |
+| `hive-auditor.md` | auditor | Code review, security, risk audit |
+| `hive-verifier.md` | verifier | Tests, lint, typecheck, validation |
+| `hive-documenter.md` | documenter | Documentation updates |
+| `hive-operator.md` | operator | Git, PR, branch, deployment |
+
+#### Mastra Code
+
+Location: `~/.mastracode/skills/hive/agents/`
 
 | File | Agent | Purpose |
 |------|-------|---------|
@@ -152,6 +203,8 @@ Files created by setup:
 Hive Mind Setup
 ═══════════════
 
+Detected Harness: [Command Code CLI | OpenCode | Mastra Code]
+
 Step 1: Checking built-in agents...
   explore        ✓ OK
   plan           ✓ OK
@@ -162,26 +215,26 @@ Step 1: Checking built-in agents...
   operator       ✓ OK
 
 Step 2: Setting up global configs...
-  ~/.commandcode/hive/                  ✓ Created
-  ~/.commandcode/hive/discovery.md      ✓ Created
-  ~/.commandcode/hive/planning.md       ✓ Created
-  ~/.commandcode/hive/implementation.md ✓ Created
-  ~/.commandcode/hive/review.md         ✓ Created
-  ~/.commandcode/hive/verification.md   ✓ Created
-  ~/.commandcode/hive/documentation.md  ✓ Created
-  ~/.commandcode/hive/operations.md     ✓ Created
+  [config-dir]                          ✓ Created
+  [config-dir]/discovery.md             ✓ Created
+  [config-dir]/planning.md              ✓ Created
+  [config-dir]/implementation.md        ✓ Created
+  [config-dir]/review.md                ✓ Created
+  [config-dir]/verification.md          ✓ Created
+  [config-dir]/documentation.md         ✓ Created
+  [config-dir]/operations.md            ✓ Created
 
 Hive Mind is ready. All 7 subagents verified, configs created.
 Ponytail Ultra mode is built-in — no manual activation needed.
-Edit ~/.commandcode/hive/*.md to customize agent prompts.
+Edit [config-dir]/*.md to customize agent prompts.
 ```
 
 If configs already exist:
 
 ```
 Step 2: Setting up global configs...
-  ~/.commandcode/hive/                  ✓ EXISTS
-  ~/.commandcode/hive/discovery.md      ✓ EXISTS
+  [config-dir]                          ✓ EXISTS
+  [config-dir]/discovery.md             ✓ EXISTS
   ...
 
 Hive Mind is ready. All configs present (not overwritten).
