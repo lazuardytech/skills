@@ -13,6 +13,7 @@ npx skills add lazuardytech/skills --skill <name>
 | Skill | Description |
 |-------|-------------|
 | [hive](./skills/hive/) | Subagent orchestration — 7 agents, parallel execution, Ponytail Ultra built-in |
+| [hive-setup](./skills/hive-setup/) | Setup skill for Hive Mind — detects harness and creates agent configs |
 | [whatsapp-web](./skills/whatsapp-web/) | WhatsApp Web automation — login, send/read messages, list chats |
 | [google-sheets](./skills/google-sheets/) | Google Sheets read/write — read rows, update cells, append rows |
 
