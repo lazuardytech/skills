@@ -141,6 +141,9 @@ them. Setup must:
 
 ### Agent Prompt Files
 
+Templates for all harnesses are in `templates/` directory.
+Setup copies from templates to the appropriate harness-specific location.
+
 #### Command Code CLI
 
 Location: `~/.commandcode/hive/`
