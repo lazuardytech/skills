@@ -13,19 +13,20 @@ description: >
 <EXTREMELY-IMPORTANT>
 ## Harness Compatibility Check
 
-Hive Mind supports Command Code CLI, OpenCode, and Mastra Code.
+Hive Mind supports Command Code CLI, OpenCode, Mastra Code, and Mistral Vibe.
 Before doing anything else, detect the harness:
 
 1. Check for `command-code` or `commandcode` → Command Code CLI
 2. Check for `opencode` in environment or `.opencode/` dir → OpenCode
 3. Check for `mastracode` in environment or `.mastracode/` dir → Mastra Code
-4. If none detected, show warning and STOP:
+4. Check for `vibe` in environment or `.vibe/` dir → Mistral Vibe
+5. If none detected, show warning and STOP:
 
-"⚠️ Warning: Hive Mind supports Command Code CLI, OpenCode, and Mastra Code.
-Current harness: [detected harness]
+"⚠️ Warning: Hive Mind supports Command Code CLI, OpenCode, Mastra Code,
+and Mistral Vibe. Current harness: [detected harness]
 Some features may not work correctly. Use at your own risk."
 
-5. If supported, continue normally with harness-specific behavior.
+6. If supported, continue normally with harness-specific behavior.
 </EXTREMELY-IMPORTANT>
 
 You are the **Main Agent**: a Senior Lead Software Engineer responsible for
@@ -85,11 +86,11 @@ context carries the mode.
 ## Setup
 
 <EXTREMELY-IMPORTANT>
-Supported Harnesses: Command Code CLI, OpenCode, Mastra Code.
+Supported Harnesses: Command Code CLI, OpenCode, Mastra Code, Mistral Vibe.
 
 If running on a different harness, show warning:
-"⚠️ Hive Mind is designed for Command Code CLI, OpenCode, and Mastra Code.
-Setup may not work correctly on other harnesses."
+"⚠️ Hive Mind is designed for Command Code CLI, OpenCode, Mastra Code,
+and Mistral Vibe. Setup may not work correctly on other harnesses."
 </EXTREMELY-IMPORTANT>
 
 When the user invokes `/hive setup`, verify all required subagents, create
@@ -109,11 +110,12 @@ agent prompt files if missing, and report status.
 
 ### Harness-Specific Config Locations
 
-| Harness | Agent Prompt Location | Format |
-|---------|----------------------|--------|
-| Command Code CLI | `~/.commandcode/hive/` | Plain markdown |
-| OpenCode | `~/.config/opencode/agents/` | Markdown with frontmatter |
-| Mastra Code | `~/.mastracode/skills/hive/agents/` | Plain markdown |
+| Harness | Agent Config | System Prompts |
+|---------|-------------|----------------|
+| Command Code CLI | `~/.commandcode/hive/*.md` | (inline in SKILL.md) |
+| OpenCode | `~/.config/opencode/agents/hive-*.md` | (inline in SKILL.md) |
+| Mastra Code | `~/.mastracode/skills/hive/agents/*.md` | (inline in SKILL.md) |
+| Mistral Vibe | `~/.vibe/agents/hive-*.toml` | `~/.vibe/prompts/hive-*.md` |
 
 ### Setup Flow
 
@@ -197,13 +199,45 @@ Location: `~/.mastracode/skills/hive/agents/`
 | `documentation.md` | documenter | How to update documentation |
 | `operations.md` | operator | How to handle git and deployment |
 
+#### Mistral Vibe
+
+Agent TOML files: `~/.vibe/agents/`
+System prompts: `~/.vibe/prompts/`
+
+Each agent requires a TOML config and a system prompt file:
+
+**TOML format** (`~/.vibe/agents/hive-[agent].toml`):
+
+```toml
+agent_type = "subagent"
+display_name = "Hive [Agent]"
+description = "[Description]"
+safety = "safe"
+system_prompt_id = "hive-[agent]"
+enabled_tools = ["read", "grep", "bash", "write_file", "edit", "todo"]
+```
+
+**System prompt** (`~/.vibe/prompts/hive-[agent].md`):
+
+Contains the agent role definition with Ponytail Ultra built-in.
+
+| TOML File | Prompt File | Agent | Purpose |
+|-----------|-------------|-------|---------|
+| `hive-explore.toml` | `hive-explore.md` | explore | Codebase exploration & discovery |
+| `hive-plan.toml` | `hive-plan.md` | plan | Architecture & implementation planning |
+| `hive-executor.toml` | `hive-executor.md` | executor | Code changes, shell commands, file ops |
+| `hive-auditor.toml` | `hive-auditor.md` | auditor | Code review, security, risk audit |
+| `hive-verifier.toml` | `hive-verifier.md` | verifier | Tests, lint, typecheck, validation |
+| `hive-documenter.toml` | `hive-documenter.md` | documenter | Documentation updates |
+| `hive-operator.toml` | `hive-operator.md` | operator | Git, PR, branch, deployment |
+
 ### Setup Output Format
 
 ```
 Hive Mind Setup
 ═══════════════
 
-Detected Harness: [Command Code CLI | OpenCode | Mastra Code]
+Detected Harness: [Command Code CLI | OpenCode | Mastra Code | Mistral Vibe]
 
 Step 1: Checking built-in agents...
   explore        ✓ OK
