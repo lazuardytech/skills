@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Verifier"
+description = "Tests, lint, typecheck, validation. Runs checks and reports results."
+safety = "neutral"
+system_prompt_id = "hive-verifier"
+enabled_tools = ["read", "grep", "find_files", "search_content", "bash", "todo"]

@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Documenter"
+description = "Documentation updates. Creates and maintains project documentation."
+safety = "safe"
+system_prompt_id = "hive-documenter"
+enabled_tools = ["read", "grep", "find_files", "search_content", "write_file", "edit", "todo"]

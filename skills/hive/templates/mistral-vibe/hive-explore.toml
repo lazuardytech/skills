@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Explore"
+description = "Codebase exploration & discovery. Read-only agent for understanding project structure."
+safety = "safe"
+system_prompt_id = "hive-explore"
+enabled_tools = ["read", "grep", "find_files", "search_content", "todo"]

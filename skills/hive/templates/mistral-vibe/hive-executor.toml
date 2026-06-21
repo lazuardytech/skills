@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Executor"
+description = "Code changes, shell commands, file operations. Makes actual code modifications."
+safety = "neutral"
+system_prompt_id = "hive-executor"
+enabled_tools = ["read", "grep", "find_files", "search_content", "bash", "write_file", "edit", "todo"]

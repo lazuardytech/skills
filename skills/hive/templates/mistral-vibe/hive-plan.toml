@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Plan"
+description = "Architecture & implementation planning. Designs approaches before code changes."
+safety = "safe"
+system_prompt_id = "hive-plan"
+enabled_tools = ["read", "grep", "find_files", "search_content", "todo"]

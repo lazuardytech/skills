@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Hive Operator"
+description = "Git, PR, branch, deployment operations. Handles version control and deployment."
+safety = "neutral"
+system_prompt_id = "hive-operator"
+enabled_tools = ["read", "grep", "find_files", "search_content", "bash", "todo"]

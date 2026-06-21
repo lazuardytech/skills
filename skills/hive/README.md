@@ -68,15 +68,21 @@ All subagents run Ponytail Ultra by default:
 
 ```
 skills/hive/
-├── SKILL.md           # Main skill definition (596 lines)
-└── agents/            # Agent prompt templates
-    ├── discovery.md
-    ├── planning.md
-    ├── implementation.md
-    ├── review.md
-    ├── verification.md
-    ├── documentation.md
-    └── operations.md
+├── SKILL.md           # Main skill definition
+├── README.md          # This file
+├── agents/            # Agent prompt templates (base)
+│   ├── discovery.md
+│   ├── documentation.md
+│   ├── implementation.md
+│   ├── operations.md
+│   ├── planning.md
+│   ├── review.md
+│   └── verification.md
+└── templates/         # Harness-specific templates
+    ├── commandcode/   # Command Code CLI
+    ├── opencode/      # OpenCode (markdown with frontmatter)
+    ├── mastracode/    # Mastra Code
+    └── mistral-vibe/  # Mistral Vibe (TOML + MD)
 ```
 
 ## License

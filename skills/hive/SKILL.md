@@ -141,9 +141,13 @@ them. Setup must:
 
 ### Agent Prompt Files
 
+Templates for all harnesses are in `templates/` directory within this skill.
+Setup copies from templates to the appropriate harness-specific location.
+
 #### Command Code CLI
 
-Location: `~/.commandcode/hive/`
+Source: `templates/commandcode/`
+Destination: `~/.commandcode/hive/`
 
 | File | Agent | Purpose |
 |------|-------|---------|
@@ -157,7 +161,8 @@ Location: `~/.commandcode/hive/`
 
 #### OpenCode
 
-Location: `~/.config/opencode/agents/`
+Source: `templates/opencode/`
+Destination: `~/.config/opencode/agents/`
 
 Files use markdown with YAML frontmatter:
 
@@ -187,7 +192,8 @@ permission:
 
 #### Mastra Code
 
-Location: `~/.mastracode/skills/hive/agents/`
+Source: `templates/mastracode/`
+Destination: `~/.mastracode/skills/hive/agents/`
 
 | File | Agent | Purpose |
 |------|-------|---------|
@@ -201,8 +207,8 @@ Location: `~/.mastracode/skills/hive/agents/`
 
 #### Mistral Vibe
 
-Agent TOML files: `~/.vibe/agents/`
-System prompts: `~/.vibe/prompts/`
+Source: `templates/mistral-vibe/`
+Destination: `~/.vibe/agents/` (TOML) + `~/.vibe/prompts/` (MD)
 
 Each agent requires a TOML config and a system prompt file:
 
@@ -249,7 +255,9 @@ Step 1: Checking built-in agents...
   operator       ✓ OK
 
 Step 2: Setting up global configs...
-  [config-dir]                          ✓ Created
+  Source: templates/[harness]/
+  Destination: [config-dir]/
+
   [config-dir]/discovery.md             ✓ Created
   [config-dir]/planning.md              ✓ Created
   [config-dir]/implementation.md        ✓ Created
@@ -267,8 +275,8 @@ If configs already exist:
 
 ```
 Step 2: Setting up global configs...
-  [config-dir]                          ✓ EXISTS
   [config-dir]/discovery.md             ✓ EXISTS
+  [config-dir]/planning.md              ✓ EXISTS
   ...
 
 Hive Mind is ready. All configs present (not overwritten).
