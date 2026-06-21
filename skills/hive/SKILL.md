@@ -6,6 +6,7 @@ description: >
   review, and verification. Use when the user says "/hive", "/hive on", or
   when Hive mode is active. Deactivate with "/hive off". Run "/hive setup"
   to verify all required subagents are available.
+user-invocable: true
 ---
 
 # Hive Mind
