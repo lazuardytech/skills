@@ -25,7 +25,7 @@ skills/
     README.md      # Human docs
     scripts/       # CLI entry points (optional)
     src/           # Python package (optional)
-    prompts/       # Agent prompt files (optional)
+    prompts/       # Agent prompt files (optional, e.g. hive)
 ```
 
 ## Adding a Skill
