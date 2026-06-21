@@ -4,28 +4,30 @@ Instructions for AI agents working in this repository.
 
 ## Context
 
-Read `.agents/context.md` for project overview, structure, and conventions.
+Read `.agents/context.md` for project overview and conventions.
 
-## Working with Skills
+## Skills
 
-- Each skill lives in `skills/<name>/` with its own `SKILL.md`, `scripts/`, `src/`, and `README.md`
-- Read the skill's `SKILL.md` before invoking any script — it contains trigger rules and behavioral instructions
-- Scripts are non-interactive: pass all inputs as CLI flags
-- Always check exit codes and parse JSON stdout for results
+- Each skill lives in `skills/<name>/` with `SKILL.md`
+- Read `SKILL.md` before invoking any script
+- Scripts: JSON to stdout, diagnostics to stderr
+- Exit codes: `0` success, `1` error, `2` not found, `3` missing `--confirm`
 
 ## Code Changes
 
-- Match existing style — Ruff, line length 100, Python 3.10+
-- Run `ruff format` and `ruff check` on any modified skill before finishing
-- Do not add a top-level `requirements.txt` — use PEP 723 inline deps in each script
+- Match existing style: Ruff, line length 100, Python 3.10+
+- Run `ruff format` and `ruff check` before push
+- Use PEP 723 inline deps, no top-level `requirements.txt`
 
 ## Adding a Skill
 
-Follow the steps in `.agents/context.md` → "Adding a New Skill".
-After adding, update the skills table in `README.md`.
+1. Create `skills/<name>/`
+2. Add `SKILL.md` with frontmatter
+3. Add `README.md`
+4. Update table in `README.md`
 
 ## Safety
 
-- Destructive scripts (`delete_group.py`, `exit_group.py`, `delete_chat.py`) require `--confirm`
-- Always ask the user for explicit confirmation before passing `--confirm`
-- Never kill the Chrome process — it persists across runs by design
+- Destructive scripts require `--confirm`
+- Ask user before passing `--confirm`
+- Never kill Chrome process — persists by design

@@ -1,17 +1,17 @@
 # .agents/
 
-Supplementary context for AI agents working in this repo.
+Supplementary context for AI agents.
 
 ## Contents
 
 | File | Purpose |
 |------|---------|
 | `INDEX.md` | This file — directory map |
-| `context.md` | Project overview, conventions, and dev workflow |
+| `context.md` | Project overview, conventions, workflow |
 
 ## Quick Reference
 
-- Skills live in `skills/<name>/` — each has `SKILL.md`, `scripts/`, `src/`, `README.md`
-- Scripts: JSON to stdout, diagnostics to stderr, exit codes 0/1/2/3
-- Python style: Ruff, line length 100, target py310
-- See `AGENTS.md` at repo root for agent instructions
+- Skills: `skills/<name>/` — each has `SKILL.md`
+- Scripts: JSON stdout, diagnostics stderr, exit codes 0/1/2/3
+- Python: Ruff, line length 100, py310
+- See `AGENTS.md` for agent instructions
