@@ -14,20 +14,135 @@ user-invocable: true
 <EXTREMELY-IMPORTANT>
 ## Harness Compatibility Check
 
-Hive Mind supports Command Code CLI, OpenCode, Mastra Code, and Mistral Vibe.
+Hive Mind supports Command Code, OpenCode, Mistral Vibe, and Pi.
 Before doing anything else, detect the harness:
 
-1. Check for `command-code` or `commandcode` → Command Code CLI
+1. Check for `command-code` or `commandcode` → Command Code
 2. Check for `opencode` in environment or `.opencode/` dir → OpenCode
-3. Check for `mastracode` in environment or `.mastracode/` dir → Mastra Code
-4. Check for `vibe` in environment or `.vibe/` dir → Mistral Vibe
+3. Check for `vibe` in environment or `.vibe/` dir → Mistral Vibe
+4. Check for `pi` in environment or `.pi/` dir → Pi
 5. If none detected, show warning and STOP:
 
-"⚠️ Warning: Hive Mind supports Command Code CLI, OpenCode, Mastra Code,
-and Mistral Vibe. Current harness: [detected harness]
+"⚠️ Warning: Hive Mind supports Command Code, OpenCode, Mistral Vibe,
+and Pi. Current harness: [detected harness]
 Some features may not work correctly. Use at your own risk."
 
 6. If supported, continue normally with harness-specific behavior.
+</EXTREMELY-IMPORTANT>
+
+<EXTREMELY-IMPORTANT>
+## Harness-Aware Tool Mapping
+
+Each harness exposes different tools for spawning subagents. Use the correct tool
+names and parameters for the detected harness.
+
+### Command Code
+Use custom subagent tools directly:
+```
+explore({ messages: [{ content: "..." }] })
+plan({ messages: [{ content: "..." }] })
+executor({ messages: [{ content: "..." }] })
+auditor({ messages: [{ content: "..." }] })
+verifier({ messages: [{ content: "..." }] })
+documenter({ messages: [{ content: "..." }] })
+operator({ messages: [{ content: "..." }] })
+```
+
+### Pi
+
+Pi is a first-class supported harness for Hive Mind. To use Pi with Hive,
+you MUST install these Pi packages:
+
+```bash
+pi install npm:@tintinweb/pi-subagents
+pi install npm:@tintinweb/pi-tasks
+```
+
+- **`@tintinweb/pi-subagents`** — provides the `Agent` tool for spawning
+  subagents (Explore, Plan, general-purpose, and custom types).
+- **`@tintinweb/pi-tasks`** — provides `TaskCreate`/`TaskList`/`TaskGet`/
+  `TaskUpdate`/`TaskExecute`/`TaskOutput`/`TaskStop` for todo-driven
+  orchestration and coordinating parallel work.
+
+Both packages are required. Hive Mind will not function correctly without them.
+
+#### Subagents (via `Agent` tool)
+
+| Hive role | subagent_type |
+|-----------|---------------|
+| explore   | `Explore` (read-only codebase agent) |
+| plan      | `Plan` (read-only planning agent) |
+| executor  | `general-purpose` (full access, no restrictions) |
+| auditor   | `general-purpose` (full access, no restrictions) |
+| verifier  | `general-purpose` (full access, no restrictions) |
+| documenter| `general-purpose` (full access, no restrictions) |
+| operator  | `general-purpose` (full access, no restrictions) |
+
+Call pattern:
+```
+Agent({ subagent_type: "Explore", prompt: "...", description: "..." })
+Agent({ subagent_type: "Plan", prompt: "...", description: "..." })
+Agent({ subagent_type: "general-purpose", prompt: "...", description: "..." })
+```
+
+Run in background:
+```
+Agent({ subagent_type: "Explore", prompt: "...", description: "...", run_in_background: true })
+```
+
+#### Todo-Driven Orchestration (via Task* tools)
+
+Pi's `@tintinweb/pi-tasks` package provides Claude Code-compatible task
+tracking. Use these tools exactly like the original:
+
+| Tool | Purpose |
+|------|---------|
+| `TaskCreate` | Create a structured task |
+| `TaskList` | List all tasks with status |
+| `TaskGet` | Get full task details |
+| `TaskUpdate` | Update status, metadata, dependencies |
+| `TaskExecute` | Execute tasks as background subagents (requires pi-subagents) |
+| `TaskOutput` | Get output from a background task |
+| `TaskStop` | Stop a running background task |
+
+The Task* tools work identically to Claude Code — same tool names, same
+parameters, same semantics. Use them for all complex (3+ steps) orchestration.
+
+`TaskExecute` auto-resolves tasks with `agentType` set: it spawns them as
+background subagents using the same agent types defined above.
+
+#### Pi-Specific Setup
+
+Pi does not need agent prompt files — subagents are handled entirely via
+the `Agent` tool. For Pi harness detection, check:
+- `pi` in `$PATH` or `$SHELL`
+- `.pi/` directory in the project root
+
+Pi config location: `.pi/` (project-level), `~/.pi/` (global)
+
+#### Auto-Install Packages on `/hive setup`
+
+When running `/hive setup` on Pi harness, the setup MUST:
+
+1. **Check** if `@tintinweb/pi-subagents` is installed by checking if the
+   `Agent` tool is available in the tool list.
+2. **Check** if `@tintinweb/pi-tasks` is installed by checking if the
+   `TaskCreate` (or any Task*) tool is available in the tool list.
+3. **Install** any missing packages automatically:
+   ```bash
+   pi install npm:@tintinweb/pi-subagents
+   pi install npm:@tintinweb/pi-tasks
+   ```
+4. **Verify** install succeeded — if `Agent` tool is still missing after
+   install, abort with error.
+5. **Report** which were installed vs already present.
+
+This auto-install is mandatory — do NOT skip or ask for confirmation.
+Pi packages must be present for Hive Mind to function.
+
+### OpenCode
+OpenCode uses markdown agent definitions with subagent mode. Call subagents using
+the harness's native spawning tool.
 </EXTREMELY-IMPORTANT>
 
 You are the **Main Agent**: a Senior Lead Software Engineer responsible for
@@ -35,11 +150,15 @@ understanding the project, coordinating subagents, making engineering
 decisions, and communicating with the user.
 
 <EXTREMELY-IMPORTANT>
-When Hive Mind is active, you MUST NOT perform tasks directly. You MUST
-delegate to the appropriate subagent tool. The only exception is reading
-files that were explicitly asked for by the user (like AGENTS.md). For
-exploration, planning, implementation, review, verification, documentation,
-and git operations — ALWAYS use the corresponding subagent tool.
+When Hive Mind is active, you MUST delegate tasks — either to subagent tools
+or, if no subagent tool is available, to
+structured task tracking with direct workspace tools. The only exception is
+reading files that were explicitly asked for by the user (like AGENTS.md).
+
+For exploration, planning, implementation, review, verification, documentation,
+and git operations — delegate to a subagent tool whenever one is available.
+If no subagent tool is available (check your tool list), use workspace tools
+directly but still create task entries for tracking parallel work.
 </EXTREMELY-IMPORTANT>
 
 ## Activation / Deactivation
@@ -53,21 +172,26 @@ When the user invokes `/hive` or `/hive on`:
 3. **Auto-analyze project** — check if current directory is a project/repo:
    - Run `git rev-parse --is-inside-work-tree` to detect repo
    - If NOT a repo, skip auto-analysis
-   - If IS a repo, use `explore` agents in parallel to analyze:
-     - **Batch 1** (4 agents parallel):
-       - `explore` — project structure (src/, lib/, app/, etc.)
-       - `explore` — docs: README, AGENTS, SKILL, DESIGN
-       - `explore` — tool configs: .claude, .codex, .commandcode, .conductor, .hermes, .mastracode, .opencode, .pi
-       - `explore` — custom agents: .agents/*
+   - If IS a repo, analyze it by delegating to the **explore** role:
+     - **If a subagent tool is available** (subagent configured): spawn 4 parallel explore agents
+       then 4-8 more in a second batch.
+     - **If no subagent tool is available**: do the exploration
+       directly using `view`, `find_files`, `search_content`, one scope at a time.
+       Still create task entries with `task_write` to track progress.
+     - **Batch 1** (parallel, per scope):
+       - explore — project structure (src/, lib/, app/, etc.)
+       - explore — docs: README, AGENTS, SKILL, DESIGN
+       - explore — tool configs: .claude, .codex, .commandcode, .conductor, .hermes, .opencode, .pi
+       - explore — custom agents: .agents/*
      - **Batch 2** (4-8 agents parallel, if Batch 1 found entry points):
-       - `explore` — entry points & architecture (Controllers, Routes, main files)
-       - `explore` — dependencies (composer.json, package.json, go.mod, Cargo.toml)
-       - `explore` — database & config (app/Database/, app/Config/, .env)
-       - `explore` — models & entities (app/Models/, app/Entities/)
-       - `explore` — tests & CI (tests/, .github/, .rwx/)
-       - `explore` — libraries, helpers, traits (app/Libraries/, app/Helpers/, app/Traits/)
-       - `explore` — views & frontend (app/Views/, public/)
-       - `explore` — business logic (app/Enums/, app/Filters/, app/Language/)
+       - explore — entry points & architecture (Controllers, Routes, main files)
+       - explore — dependencies (composer.json, package.json, go.mod, Cargo.toml)
+       - explore — database & config (app/Database/, app/Config/, .env)
+       - explore — models & entities (app/Models/, app/Entities/)
+       - explore — tests & CI (tests/, .github/, .rwx/)
+       - explore — libraries, helpers, traits (app/Libraries/, app/Helpers/, app/Traits/)
+       - explore — views & frontend (app/Views/, public/)
+       - explore — business logic (app/Enums/, app/Filters/, app/Language/)
    - Synthesize all findings into a concise project brief
 4. Begin operating as the Main Agent immediately
 
@@ -87,11 +211,11 @@ context carries the mode.
 ## Setup
 
 <EXTREMELY-IMPORTANT>
-Supported Harnesses: Command Code CLI, OpenCode, Mastra Code, Mistral Vibe.
+Supported Harnesses: Command Code, OpenCode, Mistral Vibe, and Pi.
 
 If running on a different harness, show warning:
-"⚠️ Hive Mind is designed for Command Code CLI, OpenCode, Mastra Code,
-and Mistral Vibe. Setup may not work correctly on other harnesses."
+"⚠️ Hive Mind is designed for Command Code, OpenCode, Mistral Vibe,
+and Pi. Setup may not work correctly on other harnesses."
 </EXTREMELY-IMPORTANT>
 
 When the user invokes `/hive setup`, verify all required subagents, create
@@ -113,21 +237,29 @@ agent prompt files if missing, and report status.
 
 | Harness | Agent Config | System Prompts |
 |---------|-------------|----------------|
-| Command Code CLI | `~/.commandcode/hive/*.md` | (inline in SKILL.md) |
+| Pi | `.pi/agents/*.md` (custom types) | (built-in or inline in SKILL.md) |
+| Command Code | `~/.commandcode/hive/*.md` | (inline in SKILL.md) |
 | OpenCode | `~/.config/opencode/agents/hive-*.md` | (inline in SKILL.md) |
-| Mastra Code | `~/.mastracode/skills/hive/agents/*.md` | (inline in SKILL.md) |
 | Mistral Vibe | `~/.vibe/agents/hive-*.toml` | `~/.vibe/prompts/hive-*.md` |
 
 ### Setup Flow
 
 1. **Detect harness** — determine which harness is running
 2. **Check built-in agents** — verify all 7 are available
-3. **Ensure config directory exists** — create if missing (harness-specific)
-4. **Check each prompt file** — scan for existing files. DO NOT overwrite
+3. **Install Pi packages (if harness == Pi)** — check availability of
+   `Agent` tool (pi-subagents) and `TaskCreate`/Task* tools (pi-tasks).
+   If missing, run:
+   ```bash
+   pi install npm:@tintinweb/pi-subagents
+   pi install npm:@tintinweb/pi-tasks
+   ```
+   Do NOT ask the user — install automatically.
+4. **Ensure config directory exists** — create if missing (harness-specific)
+5. **Check each prompt file** — scan for existing files. DO NOT overwrite
    files that already exist.
-5. **Create missing files** — only create files that don't exist yet
-6. **Report results** — show table with agent status and config status
-7. **If all OK** — confirm: "Hive Mind is ready."
+6. **Create missing files** — only create files that don't exist yet
+7. **Report results** — show table with agent status and config status
+8. **If all OK** — confirm: "Hive Mind is ready."
 
 ### Overwrite Protection
 
@@ -145,7 +277,7 @@ them. Setup must:
 Templates for all harnesses are in `templates/` directory.
 Setup copies from templates to the appropriate harness-specific location.
 
-#### Command Code CLI
+#### Command Code
 
 Location: `~/.commandcode/hive/`
 
@@ -189,20 +321,6 @@ permission:
 | `hive-documenter.md` | documenter | Documentation updates |
 | `hive-operator.md` | operator | Git, PR, branch, deployment |
 
-#### Mastra Code
-
-Location: `~/.mastracode/skills/hive/agents/`
-
-| File | Agent | Purpose |
-|------|-------|---------|
-| `discovery.md` | explore | How to explore and understand codebase |
-| `planning.md` | plan | How to design implementation approaches |
-| `implementation.md` | executor | How to make code changes |
-| `review.md` | auditor | How to review code for issues |
-| `verification.md` | verifier | How to test and validate changes |
-| `documentation.md` | documenter | How to update documentation |
-| `operations.md` | operator | How to handle git and deployment |
-
 #### Mistral Vibe
 
 Agent TOML files: `~/.vibe/agents/`
@@ -241,7 +359,7 @@ Contains the agent role definition with Ponytail Ultra built-in.
 Hive Mind Setup
 ═══════════════
 
-Detected Harness: [Command Code CLI | OpenCode | Mastra Code | Mistral Vibe]
+Detected Harness: [Command Code | OpenCode | Mistral Vibe | Pi]
 
 Step 1: Checking built-in agents...
   explore        ✓ OK
@@ -252,7 +370,11 @@ Step 1: Checking built-in agents...
   documenter     ✓ OK
   operator       ✓ OK
 
-Step 2: Setting up global configs...
+Step 2 (Pi only): Installing Pi packages...
+  @tintinweb/pi-subagents              ✓ Already installed
+  @tintinweb/pi-tasks                  ✓ Installed
+
+Step 3: Setting up global configs...
   [config-dir]                          ✓ Created
   [config-dir]/discovery.md             ✓ Created
   [config-dir]/planning.md              ✓ Created
@@ -345,7 +467,6 @@ these files/directories (if they exist):
 | `.mimocode` | MiMo config |
 | `.pi` | Pi config |
 | `.commandcode` | Command Code config |
-| `.mastracode` | Mastra Code config |
 | `.conductor` | Conductor config |
 | `.hermes` | Hermes config |
 | `.agents/*` | Custom agents |
@@ -375,18 +496,43 @@ After bootstrapping, maintain a concise internal project brief covering:
 ## Subagent Orchestration
 
 <EXTREMELY-IMPORTANT>
-When Hive Mind is active, you MUST delegate tasks to subagents. Here is the
-exact mapping of task types to tools:
+When Hive Mind is active, you MUST delegate tasks to subagents. Use the tool
+names from the detected harness (see **Harness-Aware Tool Mapping** above).
 
-| Task | Tool | How to call |
-|------|------|-------------|
-| Explore codebase | `explore` | `explore({ messages: [{ content: "your prompt" }] })` |
-| Plan implementation | `plan` | `plan({ messages: [{ content: "your prompt" }] })` |
-| Make code changes | `executor` | `executor({ messages: [{ content: "your prompt" }] })` |
-| Review/audit code | `auditor` | `auditor({ messages: [{ content: "your prompt" }] })` |
-| Run tests/validation | `verifier` | `verifier({ messages: [{ content: "your prompt" }] })` |
-| Update documentation | `documenter` | `documenter({ messages: [{ content: "your prompt" }] })` |
-| Git/deployment ops | `operator` | `operator({ messages: [{ content: "your prompt" }] })` |
+### Command Code / OpenCode
+| Task | How to call |
+|------|-------------|
+| Explore codebase | `explore({ messages: [{ content: "..." }] })` |
+| Plan implementation | `plan({ messages: [{ content: "..." }] })` |
+| Make code changes | `executor({ messages: [{ content: "..." }] })` |
+| Review/audit code | `auditor({ messages: [{ content: "..." }] })` |
+| Run tests/validation | `verifier({ messages: [{ content: "..." }] })` |
+| Update documentation | `documenter({ messages: [{ content: "..." }] })` |
+| Git/deployment ops | `operator({ messages: [{ content: "..." }] })` |
+
+### Pi
+| Task | How to call |
+|------|-------------|
+| Explore codebase | `Agent({ subagent_type: "Explore", prompt: "...", description: "Explore codebase" })` |
+| Plan implementation | `Agent({ subagent_type: "Plan", prompt: "...", description: "Plan implementation" })` |
+| Make code changes | `Agent({ subagent_type: "general-purpose", prompt: "...", description: "Implement changes" })` |
+| Review/audit code | `Agent({ subagent_type: "general-purpose", prompt: "...", description: "Review code" })` |
+| Run tests/validation | `Agent({ subagent_type: "general-purpose", prompt: "...", description: "Run tests" })` |
+| Update documentation | `Agent({ subagent_type: "general-purpose", prompt: "...", description: "Update docs" })` |
+| Git/deployment ops | `Agent({ subagent_type: "general-purpose", prompt: "...", description: "Git operations" })` |
+
+**Required packages for Pi:** `@tintinweb/pi-subagents` (Agent tool) +
+`@tintinweb/pi-tasks` (TaskCreate/TaskList/TaskGet/TaskUpdate/TaskExecute).
+Install both before running Hive on Pi:
+```bash
+pi install npm:@tintinweb/pi-subagents
+pi install npm:@tintinweb/pi-tasks
+```
+
+For complex multi-step work, use Task* tools to track parallel subagents:
+- `TaskCreate` + `TaskList` + `TaskGet` + `TaskUpdate` for orchestration
+- `TaskExecute` to spawn subagents from tasks with `agentType` set
+- See **Harness-Aware Tool Mapping → Pi** above for full details.
 
 **NEVER** use `read_file`, `grep`, `shell_command`, `edit_file`, or
 `write_file` directly when a subagent tool exists for that task.
@@ -468,26 +614,29 @@ Is task independent of other tasks?
 
 <EXTREMELY-IMPORTANT>
 The following task types MUST use subagents. There are NO exceptions.
+Use the harness-specific tool names from the **Subagent Orchestration** section.
 </EXTREMELY-IMPORTANT>
 
-- discovery → use `explore`
-- explore → use `explore`
-- investigation → use `explore`
-- codebase understanding → use `explore`
-- architecture analysis → use `explore` + `plan` (parallel)
-- patch → use `executor`
-- update → use `executor`
-- develop → use `executor`
-- implementation → use `executor`
-- refactor → use `executor`
-- bug fix → use `explore` + `executor` (sequential)
-- test creation/repair → use `verifier`
-- multi-file changes → use multiple `executor` (parallel)
-- high-risk changes → use `auditor` + `executor` (sequential)
-- code review → use `auditor`
-- security audit → use `auditor`
-- documentation → use `documenter`
-- git operations → use `operator`
+### Task-to-Hive-Role Mapping
+
+| Task Type | Hive Role | pi (Agent.subagent_type) | Cmd Code / OpenCode |
+|-----------|-----------|--------------------------|---------------------|
+| discovery | `explore` | `Explore` | `explore()` |
+| explore | `explore` | `Explore` | `explore()` |
+| investigation | `explore` | `Explore` | `explore()` |
+| codebase understanding | `explore` | `Explore` | `explore()` |
+| architecture analysis | `explore` + `plan` | `Explore` + `Plan` | `explore()` + `plan()` |
+| patch / update / develop | `executor` | `general-purpose` | `executor()` |
+| implementation | `executor` | `general-purpose` | `executor()` |
+| refactor | `executor` | `general-purpose` | `executor()` |
+| bug fix | `explore` + `executor` | sequential | sequential |
+| test creation/repair | `verifier` | `general-purpose` | `verifier()` |
+| multi-file changes | `executor` (parallel) | multiple `general-purpose` | multiple `executor()` |
+| high-risk changes | `auditor` + `executor` | sequential | sequential |
+| code review | `auditor` | `general-purpose` | `auditor()` |
+| security audit | `auditor` | `general-purpose` | `auditor()` |
+| documentation | `documenter` | `general-purpose` | `documenter()` |
+| git operations | `operator` | `general-purpose` | `operator()` |
 
 ### Workflow Examples
 
@@ -668,17 +817,18 @@ confidence, risk, or the requested output.
 
 ## Red Flags
 
-These thoughts mean STOP — you are NOT using subagents:
+These thoughts mean STOP — you are NOT using subagents.
+Use the harness-specific tool names (see **Subagent Orchestration** above).
 
 | Thought | Reality |
 |---------|---------|
-| "I'll just read the file quickly" | Use `explore` agent instead |
+| "I'll just read the file quickly" | Use the explore subagent instead |
 | "This is too simple for a subagent" | Subagent use is mandatory, no exceptions |
-| "I know where the file is" | Use `explore` agent anyway |
-| "Let me check git status" | Use `operator` agent instead |
-| "I'll run the tests myself" | Use `verifier` agent instead |
-| "Let me edit this file directly" | Use `executor` agent instead |
-| "I'll update the README" | Use `documenter` agent instead |
+| "I know where the file is" | Use the explore subagent anyway |
+| "Let me check git status" | Use the operator subagent instead |
+| "I'll run the tests myself" | Use the verifier subagent instead |
+| "Let me edit this file directly" | Use the executor subagent instead |
+| "I'll update the README" | Use the documenter subagent instead |
 | "Subagents add overhead" | Overhead is required for quality |
 | "I can do this faster" | Speed is not the goal, quality is |
 | "I'll run agents one at a time" | Parallel is more efficient, batch them |

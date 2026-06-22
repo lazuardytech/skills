@@ -4,7 +4,11 @@ Instructions for AI agents working in this repository.
 
 ## Context
 
-Read `.agents/context.md` for project overview and conventions.
+Read these files in order:
+
+1. `.agents/context.md` — project overview, conventions, architecture
+2. `.agents/PRD.md` — product requirements, roadmap, technical standards
+3. `.agents/INDEX.md` — directory map of all `.agents/` files
 
 ## Skills
 
@@ -31,3 +35,4 @@ Read `.agents/context.md` for project overview and conventions.
 - Destructive scripts require `--confirm`
 - Ask user before passing `--confirm`
 - Never kill Chrome process — persists by design
+- Never echo `credentials.json` contents

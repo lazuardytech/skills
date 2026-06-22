@@ -1,6 +1,6 @@
 # ✦ Hive Mind
 
-Subagent orchestration for Command Code CLI. Spawns a Senior Lead Software Engineer who coordinates 7 specialized subagents for discovery, planning, implementation, review, and verification — all running Ponytail Ultra by default.
+Subagent orchestration for Command Code, OpenCode, Mistral Vibe, and Pi. Spawns a Senior Lead Software Engineer who coordinates 7 specialized subagents for discovery, planning, implementation, review, and verification — all running Ponytail Ultra by default.
 
 ## Features
 
@@ -9,7 +9,7 @@ Subagent orchestration for Command Code CLI. Spawns a Senior Lead Software Engin
 - **Parallel Execution** — 3-5 agents simultaneously for efficiency
 - **Todo-Driven Orchestration** — complex tasks tracked with todos
 - **Auto-Project Analysis** — scans repo structure on activation (up to 12 agents)
-- **Harness Compatibility** — Command Code CLI only
+- **Harness Compatibility** — Command Code, OpenCode, Mistral Vibe, Pi
 
 ## Install
 
@@ -73,7 +73,6 @@ skills/hive/
 └── templates/
     ├── commandcode/   # 7 agent prompts
     ├── opencode/      # 7 agent prompts (with frontmatter)
-    ├── mastracode/    # 7 agent prompts
     └── mistral-vibe/  # 7 TOML configs + 7 prompts
 ```
 
